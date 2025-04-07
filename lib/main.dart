@@ -8,6 +8,54 @@ void main() {
   runApp(MyApp());
 }
 
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(debugShowCheckedModeBanner: false, home: SplashScreen());
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  @override
+  _SplashScreenState createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _loadApp();
+  }
+
+  Future<void> _loadApp() async {
+    // Simulate a delay for loading resources
+    await Future.delayed(Duration(seconds: 3));
+    // Navigate to the main app
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (context) => HomePage()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(), // Loading indicator
+            SizedBox(height: 16), // Spacing
+            Text(
+              'Habit Multiplayer is cooking...',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class WebViewPage extends StatelessWidget {
   final String url;
 
@@ -22,19 +70,6 @@ class WebViewPage extends StatelessWidget {
           'WebView for URL: $url',
         ), // Replace with actual WebView implementation
       ),
-    );
-  }
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Celik Tafsir App',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: HomePage(),
     );
   }
 }
