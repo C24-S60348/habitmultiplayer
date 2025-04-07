@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   runApp(MyApp());
@@ -64,15 +65,15 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  final buttonLabels = [
-    'Baca Al-quran',
-    'Buat app',
-    'Workout',
-    'Jog',
-    'Meditasi',
-  ];
+final buttonData = [
+  {'title': 'Baca Al-quran', 'link': 'https://quran.com'},
+  {'title': 'Buat app', 'link': 'https://flutter.dev'},
+  {'title': 'Workout', 'link': 'https://www.workout.com'},
+  {'title': 'Jog', 'link': 'https://www.jogging.com'},
+  {'title': 'Meditasi', 'link': 'https://www.meditation.com'},
+];
 
+class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,19 +101,26 @@ class _HomePageState extends State<HomePage> {
                     mainAxisSpacing: 20, // Vertical spacing
                   ),
                   itemCount:
-                      buttonLabels
-                          .length, // Dynamically set based on buttonLabels
+                      buttonData.length, // Dynamically set based on buttonData
                   itemBuilder: (context, index) {
                     return ElevatedButton(
                       onPressed: () {
-                        // Action for each button
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder:
+                                (context) => InsidePage(
+                                  title: buttonData[index]['title']!,
+                                  link: buttonData[index]['link']!,
+                                ),
+                          ),
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         shape: const CircleBorder(),
                         padding: const EdgeInsets.all(40),
                       ),
                       child: Text(
-                        buttonLabels[index],
+                        buttonData[index]['title']!,
                         style: const TextStyle(fontSize: 20),
                       ),
                     );
@@ -122,6 +130,39 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class InsidePage extends StatelessWidget {
+  final String title;
+  final String link;
+
+  const InsidePage({super.key, required this.title, required this.link});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(
+        child: Text(
+          'Open this link in your browser:\n$link',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 18),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          if (await canLaunch(link)) {
+            await launch(link);
+          } else {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Could not launch $link')));
+          }
+        },
+        child: Icon(Icons.open_in_browser),
       ),
     );
   }
