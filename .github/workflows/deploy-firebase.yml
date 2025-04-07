@@ -2,9 +2,6 @@ name: Deploy Flutter Web to Firebase Hosting
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main  # Change if your main branch has a different name
 
 jobs:
   build-and-deploy:
