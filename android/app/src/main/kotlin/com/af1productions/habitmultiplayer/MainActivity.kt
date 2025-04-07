@@ -1,4 +1,4 @@
-package com.example.celik_tafsir
+package com.af1productions.habitmultiplayer
 
 import io.flutter.embedding.android.FlutterActivity
 
