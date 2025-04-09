@@ -1,4 +1,6 @@
 import 'main_mobile.dart' if (dart.library.html) 'main_web.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // for kIsWeb
 
 void main() {
   runAppEntry();
