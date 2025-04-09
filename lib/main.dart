@@ -1,7 +1,8 @@
 import 'main_mobile.dart' if (dart.library.html) 'main_web.dart';
 
 void main() {
-  runApp(MyApp());
+  runAppEntry();
+  //runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
