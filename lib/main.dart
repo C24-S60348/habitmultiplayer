@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_html_iframe/flutter_html_iframe.dart';
-import 'dart:ui' as ui;
-import 'dart:html' as html;
 import 'package:web/web.dart' as web;
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
-//import 'main_mobile.dart' if (dart.library.html) 'main_web.dart';
+
+// Conditional imports
+import 'platform_mobile.dart' if (dart.library.html) 'platform_web.dart';
+
 
 void main() {
   //runAppEntry();
@@ -200,26 +201,12 @@ class WebIframeView extends StatelessWidget {
   Widget build(BuildContext context) {
     if (kIsWeb) {
       final String viewId = 'iframe-${url.hashCode}';
-
-      // Register once (safe for hot reload)
-      // ignore: undefined_prefixed_name
-      ui.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
-        final iframe =
-            html.IFrameElement()
-              ..src = url
-              ..style.border = 'none'
-              ..style.width = '100%'
-              ..style.height = '100%';
-        return iframe;
-      });
-
+      registerIframe(viewId, url);
       return HtmlElementView(viewType: viewId);
     } else {
-      final controller =
-          WebViewController()
-            ..setJavaScriptMode(JavaScriptMode.unrestricted)
-            ..loadRequest(Uri.parse(url));
-
+      final controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..loadRequest(Uri.parse(url));
       return WebViewWidget(controller: controller);
     }
   }
