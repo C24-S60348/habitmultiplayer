@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // for kIsWeb
-import 'main_mobile.dart' if (dart.library.html) 'main_web.dart';
+// import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_html/flutter_html.dart';
+import 'package:flutter_html_iframe/flutter_html_iframe.dart';
+import 'dart:ui' as ui;
+import 'dart:html' as html;
+import 'package:web/web.dart' as web;
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'main.dart';
+//import 'main_mobile.dart' if (dart.library.html) 'main_web.dart';
 
 void main() {
-  runAppEntry();
-  //runApp(MyApp());
+  //runAppEntry();
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
