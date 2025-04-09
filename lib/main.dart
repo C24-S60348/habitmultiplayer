@@ -8,7 +8,6 @@ import 'dart:html' as html;
 import 'package:web/web.dart' as web;
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'main.dart';
 //import 'main_mobile.dart' if (dart.library.html) 'main_web.dart';
 
 void main() {
