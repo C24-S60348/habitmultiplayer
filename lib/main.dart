@@ -159,12 +159,10 @@ class InsidePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(title: Text(title), floating: true, snap: true),
-          SliverFillRemaining(child: WebIframeView(url: link)),
-        ],
+      appBar: AppBar(
+        title: Text(title),
       ),
+      body: WebIframeView(url: link),
     );
   }
 }
