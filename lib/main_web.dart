@@ -10,6 +10,7 @@ import 'dart:html' as html;
 import 'package:web/web.dart' as web;
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'main.dart';
 
 void runAppEntry() {
   runApp(MyApp());
