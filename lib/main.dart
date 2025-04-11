@@ -146,19 +146,73 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class InsidePage extends StatelessWidget {
+class InsidePage extends StatefulWidget {
   final String title;
   final String link;
 
   const InsidePage({super.key, required this.title, required this.link});
 
   @override
+  _InsidePageState createState() => _InsidePageState();
+}
+
+class _InsidePageState extends State<InsidePage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  TextEditingController _notesController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(widget.title),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(icon: Icon(Icons.web), text: 'Web View'),
+            Tab(icon: Icon(Icons.note), text: 'Notes'),
+          ],
+        ),
       ),
-      body: WebIframeView(url: link),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          WebIframeView(url: widget.link),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _notesController,
+              maxLines: null,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Notes',
+                hintText: 'Write your notes here...',
+              ),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          final notes = _notesController.text;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Notes saved: $notes')),
+          );
+        },
+        child: const Icon(Icons.save),
+      ),
     );
   }
 }
