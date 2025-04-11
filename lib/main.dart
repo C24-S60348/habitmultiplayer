@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Conditional imports
 import 'platform_mobile.dart' if (dart.library.html) 'platform_web.dart';
@@ -146,6 +147,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+//look webview page
 class InsidePage extends StatefulWidget {
   final String title;
   final String link;
@@ -164,6 +166,9 @@ class _InsidePageState extends State<InsidePage> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // Load saved notes
+    _loadNotes();
   }
 
   @override
@@ -171,6 +176,19 @@ class _InsidePageState extends State<InsidePage> with SingleTickerProviderStateM
     _tabController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedNotes = prefs.getString('notes_${widget.title}') ?? '';
+    setState(() {
+      _notesController.text = savedNotes;
+    });
+  }
+
+  Future<void> _saveNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('notes_${widget.title}', _notesController.text);
   }
 
   @override
@@ -186,29 +204,35 @@ class _InsidePageState extends State<InsidePage> with SingleTickerProviderStateM
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: PageView(
+        physics: const NeverScrollableScrollPhysics(), // Disable swiping
         children: [
-          WebIframeView(url: widget.link),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _notesController,
-              maxLines: null,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Notes',
-                hintText: 'Write your notes here...',
+          TabBarView(
+            controller: _tabController,
+            physics: const NeverScrollableScrollPhysics(), // Disable sliding between tabs
+            children: [
+              WebIframeView(url: widget.link),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: TextField(
+                  controller: _notesController,
+                  maxLines: null,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Notes',
+                    hintText: 'Write your notes here...',
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          final notes = _notesController.text;
+        onPressed: () async {
+          await _saveNotes(); // Save the notes
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Notes saved: $notes')),
+            const SnackBar(content: Text('Notes saved successfully!')),
           );
         },
         child: const Icon(Icons.save),
