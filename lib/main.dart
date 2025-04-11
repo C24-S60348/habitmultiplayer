@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 // import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter_html/flutter_html.dart';
-import 'package:flutter_html_iframe/flutter_html_iframe.dart';
-import 'package:web/web.dart' as web;
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 // Conditional imports
@@ -121,13 +118,12 @@ class _HomePageState extends State<HomePage> {
                     return ElevatedButton(
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder:
-                                (context) => InsidePage(
-                                  title: buttonData[index]['title']!,
-                                  link: buttonData[index]['link']!,
-                                ),
-                          ),
+                            MaterialPageRoute(
+                            builder: (context) => InsidePage(
+                              title: buttonData[index]['title']!,
+                              link: buttonData[index]['link']!,
+                            ),
+                            ),
                         );
                       },
                       style: ElevatedButton.styleFrom(
