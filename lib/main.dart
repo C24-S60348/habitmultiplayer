@@ -161,11 +161,15 @@ class InsidePage extends StatefulWidget {
 class _InsidePageState extends State<InsidePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   TextEditingController _notesController = TextEditingController();
+  late final WebIframeView _webIframeView; // Persist WebIframeView
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // Initialize WebIframeView
+    _webIframeView = WebIframeView(url: widget.link);
 
     // Load saved notes
     _loadNotes();
@@ -204,27 +208,22 @@ class _InsidePageState extends State<InsidePage> with SingleTickerProviderStateM
           ],
         ),
       ),
-      body: PageView(
-        physics: const NeverScrollableScrollPhysics(), // Disable swiping
+      body: TabBarView(
+        controller: _tabController,
+        physics: const NeverScrollableScrollPhysics(), // Disable sliding
         children: [
-          TabBarView(
-            controller: _tabController,
-            physics: const NeverScrollableScrollPhysics(), // Disable sliding between tabs
-            children: [
-              WebIframeView(url: widget.link),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: TextField(
-                  controller: _notesController,
-                  maxLines: null,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'Notes',
-                    hintText: 'Write your notes here...',
-                  ),
-                ),
+          _webIframeView, // Reuse the WebIframeView
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _notesController,
+              maxLines: null,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Notes',
+                hintText: 'Write your notes here...',
               ),
-            ],
+            ),
           ),
         ],
       ),
