@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async'; // Import for Timer
 
-// Conditional imports
+//------------ Conditional imports
 import 'platform_mobile.dart' if (dart.library.html) 'platform_web.dart';
 
 void main() {
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-//splash screen
+//--------splash screen
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -148,9 +148,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-//-------------- InsidePage with Tab Navigation
-import 'package:flutter/material.dart';
-
+//--------- InsidePage with Tab Navigation
 class InsidePage extends StatefulWidget {
   final String title;
   final String link;
