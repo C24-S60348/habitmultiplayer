@@ -70,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-//home page
+//------------- home page
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -148,7 +148,9 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// InsidePage with Tab Navigation
+//-------------- InsidePage with Tab Navigation
+import 'package:flutter/material.dart';
+
 class InsidePage extends StatefulWidget {
   final String title;
   final String link;
@@ -159,173 +161,49 @@ class InsidePage extends StatefulWidget {
   _InsidePageState createState() => _InsidePageState();
 }
 
-class _InsidePageState extends State<InsidePage> {
-  TextEditingController _notesController = TextEditingController();
-  late final WebIframeView _webIframeView; // Persist WebIframeView
-  int _currentIndex = 0; // Track the selected tab
-  final ValueNotifier<int> _timerNotifier = ValueNotifier<int>(
-    0,
-  ); // Timer notifier
-  Timer? _timer; // Store the Timer instance
-  int seconds = 0; // Initialize seconds to track elapsed time
+class _InsidePageState extends State<InsidePage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  late final WebIframeView _webIframeView;
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize WebIframeView
-    _webIframeView = WebIframeView(url: widget.link);
-
-    // Load saved notes
-    _loadNotes();
+    _tabController = TabController(length: 2, vsync: this);
+    _webIframeView = WebIframeView(url: widget.link); // Initialize WebIframeView
   }
 
   @override
   void dispose() {
-    _timerNotifier.dispose(); // Dispose of the timer notifier
+    _tabController.dispose();
     super.dispose();
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      seconds++;
-      _timerNotifier.value = seconds;
-    });
-  }
-
-  Future<void> _loadNotes() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedNotes = prefs.getString('notes_${widget.title}') ?? '';
-    setState(() {
-      _notesController.text = savedNotes;
-    });
-  }
-
-  Future<void> _saveNotes() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('notes_${widget.title}', _notesController.text);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body:
-          _currentIndex == 0
-              ? _webIframeView // Show WebIframeView for the first tab
-              : Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    // Timer display
-                    ValueListenableBuilder<int>(
-                      valueListenable: _timerNotifier,
-                      builder: (context, seconds, child) {
-                        final minutes = seconds ~/ 60;
-                        final remainingSeconds = seconds % 60;
-                        return Text(
-                          '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 16), // Spacing
-                    Expanded(
-                      child: TextField(
-                        controller: _notesController,
-                        maxLines: null,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Notes',
-                          hintText: 'Write your notes here...',
-                        ),
-                        onChanged: (value) async {
-                          await _saveNotes(); // Autosave the notes on every change
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 16), // Spacing
-                    ElevatedButton(
-                      onPressed: () {
-                        if (_timerNotifier.value == 0) {
-                          _startTimer(); // Start the timer
-                          showDialog(
-                            context: context,
-                            builder: (context) {
-                              return AlertDialog(
-                                title: const Text('Timelapse Started'),
-                                content: const Text(
-                                  'Your timelapse has started.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
-                                    child: const Text('OK'),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        } else {
-                          _timer?.cancel(); // Stop the timer
-                          _timerNotifier.value = 0; // Reset the timer.
-                          seconds = 0;
-                          showDialog(
-                            context: context,
-                            builder: (context) {
-                              return AlertDialog(
-                                title: const Text('Timelapse Stopped'),
-                                content: const Text(
-                                  'Your timelapse has stopped.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
-                                    child: const Text('OK'),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        }
-                      },
-                      child: Text(
-                        _timerNotifier.value == 0
-                            ? 'Start Timelapse'
-                            : 'Stop Timelapse',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.web), label: 'Web'),
-          BottomNavigationBarItem(icon: Icon(Icons.note), label: 'Notes'),
+      appBar: AppBar(
+        title: Text(widget.title),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(icon: Icon(Icons.web), text: 'Web'),
+            Tab(icon: Icon(Icons.note), text: 'Notes'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _webIframeView, // WebIframeView for the first tab
+          NotesPage(title: widget.title), // NotesPage for the second tab
         ],
       ),
     );
   }
 }
 
-//note page
+//--------note page
 class NotesPage extends StatefulWidget {
   final String title;
 
