@@ -325,6 +325,154 @@ class _InsidePageState extends State<InsidePage> {
   }
 }
 
+//note page
+class NotesPage extends StatefulWidget {
+  final String title;
+
+  const NotesPage({super.key, required this.title});
+
+  @override
+  _NotesPageState createState() => _NotesPageState();
+}
+
+class _NotesPageState extends State<NotesPage> {
+  late TextEditingController _notesController;
+  late ValueNotifier<int> _timerNotifier;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesController = TextEditingController();
+    _timerNotifier = ValueNotifier<int>(0);
+
+    // Load saved notes
+    _loadNotes();
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    _timerNotifier.dispose();
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedNotes = prefs.getString('notes_${widget.title}') ?? '';
+    _notesController.text = savedNotes;
+  }
+
+  Future<void> _saveNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('notes_${widget.title}', _notesController.text);
+  }
+
+  void _startTimer() {
+    _timerNotifier.value = 1;
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _timerNotifier.value++;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          // Timer display
+          ValueListenableBuilder<int>(
+            valueListenable: _timerNotifier,
+            builder: (context, seconds, child) {
+              final minutes = seconds ~/ 60;
+              final remainingSeconds = seconds % 60;
+              return Text(
+                '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16), // Spacing
+          Expanded(
+            child: TextField(
+              controller: _notesController,
+              maxLines: null,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Notes',
+                hintText: 'Write your notes here...',
+              ),
+              onChanged: (value) async {
+                await _saveNotes(); // Autosave the notes on every change
+              },
+            ),
+          ),
+          const SizedBox(height: 16), // Spacing
+          ElevatedButton(
+            onPressed: () {
+              if (_timerNotifier.value == 0) {
+                _startTimer(); // Start the timer
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text('Timelapse Started'),
+                      content: const Text(
+                        'Your timelapse has started.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              } else {
+                _timer?.cancel(); // Stop the timer
+                _timerNotifier.value = 0; // Reset the timer
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text('Timelapse Stopped'),
+                      content: const Text(
+                        'Your timelapse has stopped.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              }
+            },
+            child: Text(
+              _timerNotifier.value == 0
+                  ? 'Start Timelapse'
+                  : 'Stop Timelapse',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+//Webview
 class WebIframeView extends StatelessWidget {
   final String url;
 
