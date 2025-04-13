@@ -4,10 +4,10 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async'; // Import for Timer
 
 // Conditional imports
 import 'platform_mobile.dart' if (dart.library.html) 'platform_web.dart';
-
 
 void main() {
   //runAppEntry();
@@ -119,12 +119,13 @@ class _HomePageState extends State<HomePage> {
                     return ElevatedButton(
                       onPressed: () {
                         Navigator.of(context).push(
-                            MaterialPageRoute(
-                            builder: (context) => InsidePage(
-                              title: buttonData[index]['title']!,
-                              link: buttonData[index]['link']!,
-                            ),
-                            ),
+                          MaterialPageRoute(
+                            builder:
+                                (context) => InsidePage(
+                                  title: buttonData[index]['title']!,
+                                  link: buttonData[index]['link']!,
+                                ),
+                          ),
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -147,7 +148,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-//look webview page
+// InsidePage with Tab Navigation
 class InsidePage extends StatefulWidget {
   final String title;
   final String link;
@@ -158,15 +159,19 @@ class InsidePage extends StatefulWidget {
   _InsidePageState createState() => _InsidePageState();
 }
 
-class _InsidePageState extends State<InsidePage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _InsidePageState extends State<InsidePage> {
   TextEditingController _notesController = TextEditingController();
   late final WebIframeView _webIframeView; // Persist WebIframeView
+  int _currentIndex = 0; // Track the selected tab
+  final ValueNotifier<int> _timerNotifier = ValueNotifier<int>(
+    0,
+  ); // Timer notifier
+  Timer? _timer; // Store the Timer instance
+  int seconds = 0; // Initialize seconds to track elapsed time
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
 
     // Initialize WebIframeView
     _webIframeView = WebIframeView(url: widget.link);
@@ -177,9 +182,19 @@ class _InsidePageState extends State<InsidePage> with SingleTickerProviderStateM
 
   @override
   void dispose() {
-    _tabController.dispose();
-    _notesController.dispose();
+    _timerNotifier.dispose(); // Dispose of the timer notifier
     super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      seconds++;
+      _timerNotifier.value = seconds;
+    });
   }
 
   Future<void> _loadNotes() async {
@@ -198,43 +213,113 @@ class _InsidePageState extends State<InsidePage> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.web), text: 'Web View'),
-            Tab(icon: Icon(Icons.note), text: 'Notes'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        physics: const NeverScrollableScrollPhysics(), // Disable sliding
-        children: [
-          _webIframeView, // Reuse the WebIframeView
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _notesController,
-              maxLines: null,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Notes',
-                hintText: 'Write your notes here...',
+      appBar: AppBar(title: Text(widget.title)),
+      body:
+          _currentIndex == 0
+              ? _webIframeView // Show WebIframeView for the first tab
+              : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    // Timer display
+                    ValueListenableBuilder<int>(
+                      valueListenable: _timerNotifier,
+                      builder: (context, seconds, child) {
+                        final minutes = seconds ~/ 60;
+                        final remainingSeconds = seconds % 60;
+                        return Text(
+                          '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16), // Spacing
+                    Expanded(
+                      child: TextField(
+                        controller: _notesController,
+                        maxLines: null,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Notes',
+                          hintText: 'Write your notes here...',
+                        ),
+                        onChanged: (value) async {
+                          await _saveNotes(); // Autosave the notes on every change
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16), // Spacing
+                    ElevatedButton(
+                      onPressed: () {
+                        if (_timerNotifier.value == 0) {
+                          _startTimer(); // Start the timer
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: const Text('Timelapse Started'),
+                                content: const Text(
+                                  'Your timelapse has started.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        } else {
+                          _timer?.cancel(); // Stop the timer
+                          _timerNotifier.value = 0; // Reset the timer.
+                          seconds = 0;
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: const Text('Timelapse Stopped'),
+                                content: const Text(
+                                  'Your timelapse has stopped.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        }
+                      },
+                      child: Text(
+                        _timerNotifier.value == 0
+                            ? 'Start Timelapse'
+                            : 'Stop Timelapse',
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await _saveNotes(); // Save the notes
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Notes saved successfully!')),
-          );
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
         },
-        child: const Icon(Icons.save),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.web), label: 'Web'),
+          BottomNavigationBarItem(icon: Icon(Icons.note), label: 'Notes'),
+        ],
       ),
     );
   }
@@ -250,34 +335,16 @@ class WebIframeView extends StatelessWidget {
   const WebIframeView({Key? key, required this.url}) : super(key: key);
 
   @override
-  // Widget build(BuildContext context) {
-  //   return Html(
-  //     data: '''
-  //       <iframe
-  //         src="$url"
-  //         width="100%"
-  //         height="100%"
-  //         style="border:none;">
-  //       </iframe>
-  //     ''',
-  //     style: {
-  //       "iframe": Style(
-  //         width: Width(double.infinity),
-  //         height: Height(double.infinity),
-  //       ),
-  //     },
-  //   );
-  // }
-  @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
       final String viewId = 'iframe-${url.hashCode}';
       registerIframe(viewId, url);
       return HtmlElementView(viewType: viewId);
     } else {
-      final controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..loadRequest(Uri.parse(url));
+      final controller =
+          WebViewController()
+            ..setJavaScriptMode(JavaScriptMode.unrestricted)
+            ..loadRequest(Uri.parse(url));
       return WebViewWidget(controller: controller);
     }
   }
