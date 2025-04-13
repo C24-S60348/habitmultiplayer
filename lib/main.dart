@@ -81,7 +81,7 @@ class HomePage extends StatefulWidget {
 final buttonData = [
   {'title': 'Baca Al-quran', 'link': 'https://quran.com'},
   {'title': 'Buat app', 'link': 'https://flutter.dev'},
-  {'title': 'Workout', 'link': 'https://www.workout.com'},
+  {'title': 'Workout', 'link': 'https://www.nerdfitness.com/wp-content/uploads/2021/02/Beginner-Bodyweight-Workout-Infographic-scaled.jpg'},
   {'title': 'Jog', 'link': 'https://www.jogging.com'},
   {'title': 'Meditasi', 'link': 'https://www.meditation.com'},
 ];
@@ -182,12 +182,17 @@ class _InsidePageState extends State<InsidePage>
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.web), text: 'Web'),
-            Tab(icon: Icon(Icons.note), text: 'Notes'),
-          ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(30.0), // Smaller height
+          child: TabBar(
+            controller: _tabController,
+            indicatorSize: TabBarIndicatorSize.label,
+            labelPadding: const EdgeInsets.symmetric(horizontal: 5.0),
+            tabs: const [
+              Tab(icon: Icon(Icons.web), text: 'Web'),
+              Tab(icon: Icon(Icons.note), text: 'Notes'),
+            ],
+          ),
         ),
       ),
       body: TabBarView(
