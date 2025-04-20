@@ -267,15 +267,33 @@ class _InsidePageState extends State<InsidePage>
           widget.title,
           style: TextStyle(color: Colors.white, fontSize: 18),
         ),
+        toolbarHeight: 70.0, // Increase the height of the AppBar
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(30.0), // Smaller height
           child: TabBar(
             controller: _tabController,
             indicatorSize: TabBarIndicatorSize.label,
-            labelPadding: const EdgeInsets.symmetric(horizontal: 5.0),
             tabs: const [
-              Tab(icon: Icon(Icons.web), text: 'Web'),
-              Tab(icon: Icon(Icons.note), text: 'Notes'),
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.web),
+                    SizedBox(width: 8.0),
+                    Text('Web'),
+                  ],
+                ),
+              ),
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.note),
+                    SizedBox(width: 8.0),
+                    Text('Notes'),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
