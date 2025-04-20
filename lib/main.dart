@@ -5,6 +5,8 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async'; // Import for Timer
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 //------------ Conditional imports
 import 'platform_mobile.dart' if (dart.library.html) 'platform_web.dart';
@@ -22,6 +24,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(debugShowCheckedModeBanner: false, home: SplashScreen());
   }
 }
+
 
 //--------splash screen
 class SplashScreen extends StatefulWidget {
@@ -70,6 +73,74 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
+
+//--------Login page
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  bool _isLoading = false;
+  String _response = '';
+
+  Future<void> _fetchData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': 'select * from pointercalculatoradmin',
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      setState(() {
+        _response = response.body;
+      });
+    } else {
+      setState(() {
+        _response = 'Failed to load data';
+      });
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Login Page'),
+      ),
+      body: Center(
+        child: _isLoading
+            ? CircularProgressIndicator()
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: _fetchData,
+                    child: Text('Fetch Data'),
+                  ),
+                  SizedBox(height: 20),
+                  Text(_response),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
 //------------- home page
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -101,6 +172,17 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => LoginPage(), // Assuming LoginPage is defined
+                  ),
+                );
+              },
+              child: Text('Go to Login Page'),
+            ),
             const SizedBox(height: 32),
             Expanded(
               child: Padding(
@@ -181,7 +263,10 @@ class _InsidePageState extends State<InsidePage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(
+          widget.title,
+          style: TextStyle(color: Colors.white, fontSize: 18),
+        ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(30.0), // Smaller height
           child: TabBar(
@@ -198,7 +283,12 @@ class _InsidePageState extends State<InsidePage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _webIframeView, // WebIframeView for the first tab
+          InteractiveViewer(
+            child: _webIframeView, // Wrap WebIframeView with InteractiveViewer
+            boundaryMargin: EdgeInsets.all(20.0),
+            minScale: 0.1,
+            maxScale: 1.0,
+          ),
           NotesPage(title: widget.title), // NotesPage for the second tab
         ],
       ),
