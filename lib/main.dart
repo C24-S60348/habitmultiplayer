@@ -34,9 +34,21 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  String loggedInUser = '';
+
   @override
   void initState() {
     super.initState();
+    _getLoggedInUser();
+  }
+
+  // Method to fetch logged-in user from SharedPreferences
+  Future<void> _getLoggedInUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('loggedInUsername') ?? 'guest';
+    setState(() {
+      loggedInUser = username; // Display a default if not logged in
+    });
   }
 
   @override
@@ -52,11 +64,14 @@ class _SplashScreenState extends State<SplashScreen> {
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 32), // Spacing
+                Text(
+                  'Logged in as: $loggedInUser',
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+              SizedBox(height: 32), // Spacing
               ElevatedButton(
                 onPressed: () {
-                  Navigator.of(
-                    context,
-                  ).push(MaterialPageRoute(builder: (context) => HomePage()));
+                  Navigator.of(context).push(MaterialPageRoute(builder: (context) => HomePage()));
                 },
                 style: ElevatedButton.styleFrom(
                   shape: CircleBorder(),
@@ -69,9 +84,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder:
-                          (context) =>
-                              LoginPage(), // Assuming LoginPage is defined
+                      builder: (context) => LoginPage(), // Assuming LoginPage is defined
                     ),
                   );
                 },
@@ -81,7 +94,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 icon: Icon(Icons.logout),
                 onPressed: () async {
                   final prefs = await SharedPreferences.getInstance();
-                  await prefs.remove('loggedInUsername');
+                  await prefs.remove('loggedInUsername'); // Clear the logged-in user
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (_) => LoginPage()),
                   );
@@ -94,7 +107,6 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-
 //--------Login page
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -481,6 +493,7 @@ class _InsidePageState extends State<InsidePage>
           preferredSize: const Size.fromHeight(30.0), // Smaller height
           child: TabBar(
             controller: _tabController,
+            physics: const NeverScrollableScrollPhysics(),
             indicatorSize: TabBarIndicatorSize.label,
             tabs: const [
               Tab(
@@ -509,13 +522,10 @@ class _InsidePageState extends State<InsidePage>
       ),
       body: TabBarView(
         controller: _tabController,
+        physics: NeverScrollableScrollPhysics(),
         children: [
-          InteractiveViewer(
-            child: _webIframeView, // Wrap WebIframeView with InteractiveViewer
-            boundaryMargin: EdgeInsets.all(20.0),
-            minScale: 0.1,
-            maxScale: 1.0,
-          ),
+          _webIframeView,
+
           NotesPage(title: widget.title), // NotesPage for the second tab
         ],
       ),
