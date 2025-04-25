@@ -35,6 +35,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   String loggedInUser = '';
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -48,11 +49,19 @@ class _SplashScreenState extends State<SplashScreen> {
     final username = prefs.getString('loggedInUsername') ?? 'guest';
     setState(() {
       loggedInUser = username; // Display a default if not logged in
+      _isLoading = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      // Show spinner while loading user
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
