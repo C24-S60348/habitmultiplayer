@@ -473,14 +473,140 @@ class _InsidePageState extends State<InsidePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late final WebIframeView _webIframeView;
+  bool _showNotes = false;
+  int _habitState = 0; // 0: blank, 1: ticked, 2: X
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _webIframeView = WebIframeView(
-      url: widget.link,
-    ); // Initialize WebIframeView
+    _webIframeView = WebIframeView(url: widget.link);
+    _loadHabitState();
+  }
+
+  Future<void> _loadHabitState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('loggedInUsername') ?? 'guest';
+    final today = DateTime.now();
+    final dateKey = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+
+    final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          SELECT calendar_tick FROM habitmultiplayer
+          WHERE username = '$username'
+        ''',
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final results = data['results'];
+      if (results != null && results.isNotEmpty) {
+        final tickJson = results[0]['calendar_tick'] ?? '{}';
+        try {
+          final decoded = jsonDecode(tickJson);
+          setState(() {
+            _habitState = decoded[widget.title]?[dateKey] ?? 0;
+          });
+        } catch (_) {
+          setState(() {
+            _habitState = 0;
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _cycleHabitState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('loggedInUsername') ?? 'guest';
+    final today = DateTime.now();
+    final dateKey = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+
+    // Get current calendar_tick JSON
+    final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
+    final getResponse = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          SELECT calendar_tick FROM habitmultiplayer
+          WHERE username = '$username'
+        ''',
+      }),
+    );
+
+    Map<String, dynamic> tickMap = {};
+    if (getResponse.statusCode == 200) {
+      final data = jsonDecode(getResponse.body);
+      final results = data['results'];
+      if (results != null && results.isNotEmpty) {
+        try {
+          tickMap = jsonDecode(results[0]['calendar_tick'] ?? '{}');
+        } catch (_) {
+          tickMap = {};
+        }
+      }
+    }
+
+    // Update the tick state for this habit and date
+    int newState;
+    if (_habitState == 0) {
+      newState = 1;
+    } else if (_habitState == 1) {
+      newState = -1;
+    } else {
+      newState = 0;
+    }
+    if (!tickMap.containsKey(widget.title)) tickMap[widget.title] = {};
+    tickMap[widget.title][dateKey] = newState;
+
+    // Save to server
+    final updatedJson = jsonEncode(tickMap).replaceAll(r'\', r'\\').replaceAll("'", "''");
+    await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          UPDATE habitmultiplayer
+          SET calendar_tick = '$updatedJson'
+          WHERE username = '$username'
+        ''',
+      }),
+    );
+
+    setState(() {
+      _habitState = newState;
+    });
+  }
+
+  IconData get _habitIcon {
+    switch (_habitState) {
+      case 1:
+        return Icons.check_box;
+      case -1:
+        return Icons.close;
+      default:
+        return Icons.check_box_outline_blank;
+    }
+  }
+
+  String get _habitTooltip {
+    switch (_habitState) {
+      case 1:
+        return 'Habit done (tap to mark as not done)';
+      case 2:
+        return 'Habit not done (tap to reset)';
+      default:
+        return 'Mark habit as done';
+    }
   }
 
   @override
@@ -497,47 +623,52 @@ class _InsidePageState extends State<InsidePage>
           widget.title,
           style: TextStyle(color: Colors.black, fontSize: 18),
         ),
-        toolbarHeight: 70.0, // Increase the height of the AppBar
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(30.0), // Smaller height
-          child: TabBar(
-            controller: _tabController,
-            physics: const NeverScrollableScrollPhysics(),
-            indicatorSize: TabBarIndicatorSize.label,
-            tabs: const [
-              Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.web),
-                    SizedBox(width: 8.0),
-                    Text('Web'),
-                  ],
-                ),
-              ),
-              Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.note),
-                    SizedBox(width: 8.0),
-                    Text('Notes'),
-                  ],
-                ),
-              ),
-            ],
+        actions: [
+          IconButton(
+            icon: Icon(Icons.note),
+            tooltip: 'Open Notes',
+            onPressed: () {
+              if (kIsWeb) {
+                setState(() {
+                  _showNotes = true;
+                });
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (context) => FractionallySizedBox(
+                    heightFactor: 0.85,
+                    child: NotesPage(title: widget.title, onClose: () {
+                      setState(() {
+                        _showNotes = false;
+                      });
+                      Navigator.of(context).pop();
+                    }),
+                  ),
+                ).whenComplete(() {
+                  setState(() {
+                    _showNotes = false;
+                  });
+                });
+              } else {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (context) => FractionallySizedBox(
+                    heightFactor: 0.85,
+                    child: NotesPage(title: widget.title),
+                  ),
+                );
+              }
+            },
           ),
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        physics: NeverScrollableScrollPhysics(),
-        children: [
-          _webIframeView,
-
-          NotesPage(title: widget.title), // NotesPage for the second tab
+          IconButton(
+            icon: Icon(_habitIcon),
+            tooltip: _habitTooltip,
+            onPressed: _cycleHabitState,
+          ),
         ],
       ),
+      body: (kIsWeb && _showNotes) ? SizedBox.shrink() : _webIframeView,
     );
   }
 }
@@ -545,8 +676,9 @@ class _InsidePageState extends State<InsidePage>
 //--------note page
 class NotesPage extends StatefulWidget {
   final String title;
+  final VoidCallback? onClose;
 
-  const NotesPage({super.key, required this.title});
+  const NotesPage({super.key, required this.title, this.onClose});
 
   @override
   _NotesPageState createState() => _NotesPageState();
@@ -751,6 +883,22 @@ class _NotesPageState extends State<NotesPage> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Notes', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () {
+                      if (widget.onClose != null) {
+                        widget.onClose!();
+                      } else {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                  ),
+                ],
+              ),
               // Timer display
               ValueListenableBuilder<int>(
                 valueListenable: _timerNotifier,
