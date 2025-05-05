@@ -413,41 +413,41 @@ class _HomePageState extends State<HomePage> {
           children: [
             const SizedBox(height: 32),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                ), // Padding left and right
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2, // Number of columns
-                    crossAxisSpacing: 20, // Horizontal spacing
-                    mainAxisSpacing: 20, // Vertical spacing
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: 500),
+                  child: GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2, // Number of columns
+                      crossAxisSpacing: 20, // Horizontal spacing
+                      mainAxisSpacing: 20, // Vertical spacing
+                    ),
+                    itemCount:
+                        buttonData.length, // Dynamically set based on buttonData
+                    itemBuilder: (context, index) {
+                      return ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => InsidePage(
+                                    title: buttonData[index]['title']!,
+                                    link: buttonData[index]['link']!,
+                                  ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          shape: const CircleBorder(),
+                          padding: EdgeInsets.all(kIsWeb ? 24 : 40), // smaller on web
+                        ),
+                        child: Text(
+                          buttonData[index]['title']!,
+                          style: const TextStyle(fontSize: 20),
+                        ),
+                      );
+                    },
                   ),
-                  itemCount:
-                      buttonData.length, // Dynamically set based on buttonData
-                  itemBuilder: (context, index) {
-                    return ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder:
-                                (context) => InsidePage(
-                                  title: buttonData[index]['title']!,
-                                  link: buttonData[index]['link']!,
-                                ),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        shape: const CircleBorder(),
-                        padding: const EdgeInsets.all(40),
-                      ),
-                      child: Text(
-                        buttonData[index]['title']!,
-                        style: const TextStyle(fontSize: 20),
-                      ),
-                    );
-                  },
                 ),
               ),
             ),
