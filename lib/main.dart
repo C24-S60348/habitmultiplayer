@@ -177,11 +177,9 @@ class _LoginPageState extends State<LoginPage> {
         });
 
         // Navigate to HomePage or next screen
-        Future.delayed(Duration(seconds: 1), () {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => HomePage()),
-          );
-        });
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => HomePage()),
+        );
       } else {
         setState(() {
           _response = 'Invalid username or password.';
@@ -214,12 +212,16 @@ class _LoginPageState extends State<LoginPage> {
                       TextField(
                         controller: _usernameController,
                         decoration: InputDecoration(labelText: 'Username'),
+                        textInputAction: TextInputAction.next,
+                        onSubmitted: (_) => FocusScope.of(context).nextFocus(),
                       ),
                       SizedBox(height: 10),
                       TextField(
                         controller: _passwordController,
                         decoration: InputDecoration(labelText: 'Password'),
                         obscureText: true,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _fetchData(),
                       ),
                       SizedBox(height: 20),
                       ElevatedButton(
