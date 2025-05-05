@@ -88,6 +88,16 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
                 child: Text('Start', style: TextStyle(fontSize: 30)),
               ),
+              if (loggedInUser == 'afwan')
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => AdminPage()),
+                    );
+                  },
+                  child: Text('Admin Page'),
+                ),
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () {
@@ -104,8 +114,9 @@ class _SplashScreenState extends State<SplashScreen> {
                 onPressed: () async {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.remove('loggedInUsername'); // Clear the logged-in user
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => LoginPage()),
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => SplashScreen()),
+                    (route) => false,
                   );
                 },
               ),
@@ -176,10 +187,11 @@ class _LoginPageState extends State<LoginPage> {
           _response = 'Login successful! Welcome, $username.';
         });
 
-        // Navigate to HomePage or next screen
+        // Navigate to AdminPage if admin, else SplashScreen
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => HomePage()),
+          MaterialPageRoute(builder: (context) => SplashScreen()),
         );
+        
       } else {
         setState(() {
           _response = 'Invalid username or password.';
@@ -399,6 +411,27 @@ final buttonData = [
 ];
 
 class _HomePageState extends State<HomePage> {
+  String loggedInUser = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _getLoggedInUser();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _getLoggedInUser(); // Reload username every time dependencies change
+  }
+
+  Future<void> _getLoggedInUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      loggedInUser = prefs.getString('loggedInUsername') ?? 'guest';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -424,18 +457,16 @@ class _HomePageState extends State<HomePage> {
                       crossAxisSpacing: 20, // Horizontal spacing
                       mainAxisSpacing: 20, // Vertical spacing
                     ),
-                    itemCount:
-                        buttonData.length, // Dynamically set based on buttonData
+                    itemCount: buttonData.length, // Dynamically set based on buttonData
                     itemBuilder: (context, index) {
                       return ElevatedButton(
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder:
-                                  (context) => InsidePage(
-                                    title: buttonData[index]['title']!,
-                                    link: buttonData[index]['link']!,
-                                  ),
+                              builder: (context) => InsidePage(
+                                title: buttonData[index]['title']!,
+                                link: buttonData[index]['link']!,
+                              ),
                             ),
                           );
                         },
@@ -661,6 +692,17 @@ class _InsidePageState extends State<InsidePage>
                   ),
                 );
               }
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.history),
+            tooltip: 'View Habit History',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => HabitHistoryPage(habitTitle: widget.title),
+                ),
+              );
             },
           ),
           IconButton(
@@ -1028,5 +1070,279 @@ class WebIframeView extends StatelessWidget {
             ..loadRequest(Uri.parse(url));
       return WebViewWidget(controller: controller);
     }
+  }
+}
+
+// AdminPage
+class AdminPage extends StatefulWidget {
+  @override
+  _AdminPageState createState() => _AdminPageState();
+}
+
+class _AdminPageState extends State<AdminPage> {
+  List<Map<String, dynamic>> users = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAllUsers();
+  }
+
+  Future<void> _fetchAllUsers() async {
+    final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': 'SELECT * FROM habitmultiplayer',
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final results = data['results'] as List<dynamic>;
+      setState(() {
+        users = results.cast<Map<String, dynamic>>();
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Admin Panel')),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (users.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Admin Panel')),
+        body: Center(child: Text('No data found.')),
+      );
+    }
+    final columns = users[0].keys.toList();
+    return Scaffold(
+      appBar: AppBar(title: Text('Admin Panel')),
+      body: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columns: columns.map((col) => DataColumn(label: Text(col))).toList(),
+          rows: users.map((row) {
+            return DataRow(
+              cells: columns.map((col) => DataCell(Text('${row[col]}'))).toList(),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+// HabitHistoryPage
+class HabitHistoryPage extends StatefulWidget {
+  final String habitTitle;
+  const HabitHistoryPage({Key? key, required this.habitTitle}) : super(key: key);
+
+  @override
+  _HabitHistoryPageState createState() => _HabitHistoryPageState();
+}
+
+class _HabitHistoryPageState extends State<HabitHistoryPage> {
+  Map<String, int> habitMap = {};
+  bool isLoading = true;
+  int centerOffset = 0; // 0 = today, -1 = previous, +1 = next, etc.
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHistory();
+  }
+
+  Future<void> _fetchHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('loggedInUsername') ?? 'guest';
+    final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          SELECT calendar_tick FROM habitmultiplayer
+          WHERE username = '$username'
+        '''
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final results = data['results'];
+      if (results != null && results.isNotEmpty) {
+        final tickJson = results[0]['calendar_tick'] ?? '{}';
+        try {
+          final decoded = jsonDecode(tickJson);
+          setState(() {
+            habitMap = Map<String, int>.from(decoded[widget.habitTitle] ?? {});
+            isLoading = false;
+          });
+        } catch (_) {
+          setState(() {
+            isLoading = false;
+          });
+        }
+      }
+    }
+  }
+
+  List<DateTime> getSevenDays() {
+    final today = DateTime.now();
+    final center = today.add(Duration(days: centerOffset));
+    return List.generate(7, (i) => center.add(Duration(days: i - 3)));
+  }
+
+  static const List<String> weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  Future<void> _setHabitStateForDate(DateTime date, int newState) async {
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('loggedInUsername') ?? 'guest';
+    final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
+    final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+    // Get current calendar_tick JSON
+    final getResponse = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          SELECT calendar_tick FROM habitmultiplayer
+          WHERE username = '$username'
+        '''
+      }),
+    );
+
+    Map<String, dynamic> tickMap = {};
+    if (getResponse.statusCode == 200) {
+      final data = jsonDecode(getResponse.body);
+      final results = data['results'];
+      if (results != null && results.isNotEmpty) {
+        try {
+          tickMap = jsonDecode(results[0]['calendar_tick'] ?? '{}');
+        } catch (_) {
+          tickMap = {};
+        }
+      }
+    }
+
+    if (!tickMap.containsKey(widget.habitTitle)) tickMap[widget.habitTitle] = {};
+    tickMap[widget.habitTitle][dateKey] = newState;
+
+    // Save to server
+    final updatedJson = jsonEncode(tickMap).replaceAll(r'\', r'\\').replaceAll("'", "''");
+    await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          UPDATE habitmultiplayer
+          SET calendar_tick = '$updatedJson'
+          WHERE username = '$username'
+        '''
+      }),
+    );
+
+    setState(() {
+      habitMap[dateKey] = newState;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${widget.habitTitle} History'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.arrow_back_ios),
+            onPressed: () {
+              setState(() {
+                centerOffset -= 7;
+              });
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.arrow_forward_ios),
+            onPressed: () {
+              setState(() {
+                centerOffset += 7;
+              });
+            },
+          ),
+        ],
+      ),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Center(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: getSevenDays().map((date) {
+                    int weekday = date.weekday % 7;
+                    final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+                    final state = habitMap[dateKey] ?? 0;
+                    IconData icon;
+                    Color color;
+                    if (state == 1) {
+                      icon = Icons.check_box;
+                      color = Colors.green;
+                    } else if (state == -1) {
+                      icon = Icons.close;
+                      color = Colors.red;
+                    } else {
+                      icon = Icons.check_box_outline_blank;
+                      color = Colors.grey;
+                    }
+                    final now = DateTime.now();
+                    final today = DateTime(now.year, now.month, now.day+1);
+                    final isFuture = date.isAfter(today);
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(weekDays[weekday], style: TextStyle(fontWeight: FontWeight.bold)),
+                          SizedBox(height: 4),
+                          Text('${date.day}/${date.month}', style: TextStyle(fontSize: 16)),
+                          SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: isFuture ? null : () {
+                              int newState;
+                              if (state == 0) {
+                                newState = 1;
+                              } else if (state == 1) {
+                                newState = -1;
+                              } else {
+                                newState = 0;
+                              }
+                              _setHabitStateForDate(date, newState);
+                            },
+                            child: Icon(icon, color: isFuture ? Colors.grey[300] : color, size: 40),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+    );
   }
 }
