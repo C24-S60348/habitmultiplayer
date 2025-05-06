@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async'; // Import for Timer
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:shimmer/shimmer.dart';
 
 //------------ Conditional imports
 import 'platform_mobile.dart' if (dart.library.html) 'platform_web.dart';
