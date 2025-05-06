@@ -89,15 +89,21 @@ class _SplashScreenState extends State<SplashScreen> {
                 child: Text('Start', style: TextStyle(fontSize: 30)),
               ),
               if (loggedInUser == 'afwan')
-                const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => AdminPage()),
-                    );
-                  },
-                  child: Text('Admin Page'),
+                Column(
+                  children: [
+                  const SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => AdminPage()),
+                      );
+                    },
+                    child: Text('Admin Page'),
+                  ),
+                 ],
                 ),
+              
+                
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () {
