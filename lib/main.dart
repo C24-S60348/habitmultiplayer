@@ -490,6 +490,25 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
+            // ElevatedButton(
+            //   onPressed: () {
+            //     Navigator.of(context).push(
+            //       MaterialPageRoute(
+            //         builder: (context) => HtmlContentPage(
+            //           htmlData: '''
+            //             <h1>Hello World</h1>
+            //             <p>This is <b>HTML</b> rendered in Flutter!</p>
+            //             <ul>
+            //               <li>Item 1</li>
+            //               <li>Item 2</li>
+            //             </ul>
+            //           '''.replaceAll("\n", ""),
+            //         ),
+            //       ),
+            //     );
+            //   },
+            //   child: Text('Try HTML Content'),
+            // ),
           ],
         ),
       ),
@@ -667,37 +686,42 @@ class _InsidePageState extends State<InsidePage>
             icon: Icon(Icons.note),
             tooltip: 'Open Notes',
             onPressed: () {
-              if (kIsWeb) {
-                setState(() {
-                  _showNotes = true;
-                });
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (context) => FractionallySizedBox(
-                    heightFactor: 0.85,
-                    child: NotesPage(title: widget.title, onClose: () {
-                      setState(() {
-                        _showNotes = false;
-                      });
-                      Navigator.of(context).pop();
-                    }),
-                  ),
-                ).whenComplete(() {
-                  setState(() {
-                    _showNotes = false;
-                  });
-                });
-              } else {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (context) => FractionallySizedBox(
-                    heightFactor: 0.85,
-                    child: NotesPage(title: widget.title),
-                  ),
-                );
-              }
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => NotesPage(title: widget.title),
+                ),
+              );
+              // if (kIsWeb) {
+              //   setState(() {
+              //     _showNotes = true;
+              //   });
+              //   showModalBottomSheet(
+              //     context: context,
+              //     isScrollControlled: true,
+              //     builder: (context) => FractionallySizedBox(
+              //       heightFactor: 0.85,
+              //       child: NotesPage(title: widget.title, onClose: () {
+              //         setState(() {
+              //           _showNotes = false;
+              //         });
+              //         Navigator.of(context).pop();
+              //       }),
+              //     ),
+              //   ).whenComplete(() {
+              //     setState(() {
+              //       _showNotes = false;
+              //     });
+              //   });
+              // } else {
+              //   showModalBottomSheet(
+              //     context: context,
+              //     isScrollControlled: true,
+              //     builder: (context) => FractionallySizedBox(
+              //       heightFactor: 0.85,
+              //       child: NotesPage(title: widget.title),
+              //     ),
+              //   );
+              // }
             },
           ),
           IconButton(
@@ -736,16 +760,12 @@ class NotesPage extends StatefulWidget {
 
 class _NotesPageState extends State<NotesPage> {
   late TextEditingController _notesController;
-  late ValueNotifier<int> _timerNotifier;
-  Timer? _timer;
   bool _isNotesChanged = false; // Flag to track unsaved changes
 
   @override
   void initState() {
     super.initState();
     _notesController = TextEditingController();
-    _timerNotifier = ValueNotifier<int>(0);
-
     // Load saved notes
     _loadNotes();
   }
@@ -753,8 +773,6 @@ class _NotesPageState extends State<NotesPage> {
   @override
   void dispose() {
     _notesController.dispose();
-    _timerNotifier.dispose();
-    _timer?.cancel();
     super.dispose();
   }
 
@@ -883,13 +901,6 @@ class _NotesPageState extends State<NotesPage> {
     });
   }
 
-  void _startTimer() {
-    _timerNotifier.value = 1;
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _timerNotifier.value++;
-    });
-  }
-
   Future<bool> _onWillPop() async {
     if (_isNotesChanged) {
       // Show confirmation dialog if there are unsaved changes
@@ -928,42 +939,26 @@ class _NotesPageState extends State<NotesPage> {
     return WillPopScope(
       onWillPop: _onWillPop, // Handle back navigation
       child: Scaffold(
-        // appBar: AppBar(title: const Text('Notes Page')),
+        appBar: AppBar(
+          title: Text(
+            '${widget.title} - Notes',
+            style: TextStyle(color: Colors.black, fontSize: 18),
+          ),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: () {
+              if (widget.onClose != null) {
+                widget.onClose!();
+              } else {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+        ),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Notes', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  IconButton(
-                    icon: Icon(Icons.close),
-                    onPressed: () {
-                      if (widget.onClose != null) {
-                        widget.onClose!();
-                      } else {
-                        Navigator.of(context).pop();
-                      }
-                    },
-                  ),
-                ],
-              ),
-              // Timer display
-              ValueListenableBuilder<int>(
-                valueListenable: _timerNotifier,
-                builder: (context, seconds, child) {
-                  final minutes = seconds ~/ 60;
-                  final remainingSeconds = seconds % 60;
-                  return Text(
-                    '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  );
-                },
-              ),
               const SizedBox(height: 16), // Spacing
               Expanded(
                 child: TextField(
@@ -975,7 +970,6 @@ class _NotesPageState extends State<NotesPage> {
                     hintText: 'Write your notes here...',
                   ),
                   onChanged: (value) {
-                    // Track changes to notes
                     setState(() {
                       _isNotesChanged = true;
                     });
@@ -989,59 +983,6 @@ class _NotesPageState extends State<NotesPage> {
                   ElevatedButton(
                     onPressed: _saveNotes,
                     child: const Text('Save Notes'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_timerNotifier.value == 0) {
-                        _startTimer(); // Start the timer
-                        showDialog(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: const Text('Timelapse Started'),
-                              content: const Text(
-                                'Your timelapse has started.',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: const Text('OK'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      } else {
-                        _timer?.cancel(); // Stop the timer
-                        _timerNotifier.value = 0; // Reset the timer
-                        showDialog(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: const Text('Timelapse Stopped'),
-                              content: const Text(
-                                'Your timelapse has stopped.',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: const Text('OK'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      }
-                    },
-                    child: Text(
-                      _timerNotifier.value == 0
-                          ? 'Start Timelapse'
-                          : 'Stop Timelapse',
-                    ),
                   ),
                 ],
               ),
@@ -1212,7 +1153,7 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
     return List.generate(7, (i) => center.add(Duration(days: i - 3)));
   }
 
-  static const List<String> weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  static const List<String> weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   Future<void> _setHabitStateForDate(DateTime date, int newState) async {
     final prefs = await SharedPreferences.getInstance();
@@ -1273,7 +1214,10 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.habitTitle} History'),
+        title: Text(
+          '${widget.habitTitle} - History',
+          style: TextStyle(color: Colors.black, fontSize: 18),
+        ),
         actions: [
           IconButton(
             icon: Icon(Icons.arrow_back_ios),
@@ -1349,6 +1293,23 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
                 ),
               ),
             ),
+    );
+  }
+}
+
+class HtmlContentPage extends StatelessWidget {
+  final String htmlData;
+  const HtmlContentPage({super.key, required this.htmlData});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('HTML Content')),
+      body: SingleChildScrollView(
+        child: Html(
+          data: htmlData,
+        ),
+      ),
     );
   }
 }
