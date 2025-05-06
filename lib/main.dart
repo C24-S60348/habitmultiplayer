@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async'; // Import for Timer
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shimmer/shimmer.dart';
 
 //------------ Conditional imports
 import 'platform_mobile.dart' if (dart.library.html) 'platform_web.dart';
@@ -761,6 +762,7 @@ class NotesPage extends StatefulWidget {
 class _NotesPageState extends State<NotesPage> {
   late TextEditingController _notesController;
   bool _isNotesChanged = false; // Flag to track unsaved changes
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -851,6 +853,9 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   Future<void> _loadNotes() async {
+    setState(() {
+      _isLoading = true;
+    });
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('loggedInUsername') ?? 'guest';
 
@@ -887,6 +892,9 @@ class _NotesPageState extends State<NotesPage> {
     } else {
       print('Failed to fetch notes from server: ${response.body}');
     }
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Future<void> _saveNotes() async {
@@ -960,10 +968,11 @@ class _NotesPageState extends State<NotesPage> {
           child: Column(
             children: [
               const SizedBox(height: 16), // Spacing
-              Expanded(
+             Expanded(
                 child: TextField(
                   controller: _notesController,
                   maxLines: null,
+                  enabled: !_isLoading,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     labelText: 'Notes',
@@ -981,7 +990,7 @@ class _NotesPageState extends State<NotesPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ElevatedButton(
-                    onPressed: _saveNotes,
+                    onPressed: _isLoading ? null : _saveNotes,
                     child: const Text('Save Notes'),
                   ),
                 ],
