@@ -63,70 +63,90 @@ class _SplashScreenState extends State<SplashScreen> {
     }
     
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Habit Multiplayer',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 32), // Spacing
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/skywallpaper.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
                 Text(
-                  'Logged in as: $loggedInUser',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                  'Habit Multiplayer',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-              SizedBox(height: 32), // Spacing
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).push(MaterialPageRoute(builder: (context) => HomePage()));
-                },
-                style: ElevatedButton.styleFrom(
-                  shape: CircleBorder(),
-                  padding: EdgeInsets.all(120),
-                ),
-                child: Text('Start', style: TextStyle(fontSize: 30)),
-              ),
-              if (loggedInUser == 'afwan')
-                Column(
-                  children: [
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => AdminPage()),
-                      );
-                    },
-                    child: Text('Admin Page'),
+                SizedBox(height: 32), // Spacing
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.yellow.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                 ],
+                  child: Text(
+                    'Logged in as: $loggedInUser',
+                    style: TextStyle(fontSize: 18, color: Colors.blueGrey),
+                  ),
                 ),
-              
-                
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => LoginPage(), // Assuming LoginPage is defined
+                SizedBox(height: 32), // Spacing
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(MaterialPageRoute(builder: (context) => HomePage()));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50),
                     ),
-                  );
-                },
-                child: Text('Go to Login Page'),
-              ),
-              IconButton(
-                icon: Icon(Icons.logout),
-                onPressed: () async {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.remove('loggedInUsername'); // Clear the logged-in user
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => SplashScreen()),
-                    (route) => false,
-                  );
-                },
-              ),
-            ],
+                    padding: EdgeInsets.all(80),
+                    backgroundColor: Colors.blueGrey,
+                    shadowColor: Colors.black.withOpacity(0.5),
+                    elevation: 10,
+                  ),
+                  child: Text('Start', style: TextStyle(fontSize: 30, color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Poppins', letterSpacing: 1.5)),
+                ),
+                if (loggedInUser == 'afwan')
+                  Column(
+                    children: [
+                    const SizedBox(height: 32),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => AdminPage()),
+                        );
+                      },
+                      child: Text('Admin Page'),
+                    ),
+                   ],
+                  ),
+                
+                
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => LoginPage(), // Assuming LoginPage is defined
+                      ),
+                    );
+                  },
+                  child: Text('Go to Login Page'),
+                ),
+                IconButton(
+                  icon: Icon(Icons.logout),
+                  onPressed: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.remove('loggedInUsername'); // Clear the logged-in user
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => SplashScreen()),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -218,49 +238,56 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Login Page')),
-      body: Center(
-        child:
-            _isLoading
-                ? CircularProgressIndicator()
-                : Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      TextField(
-                        controller: _usernameController,
-                        decoration: InputDecoration(labelText: 'Username'),
-                        textInputAction: TextInputAction.next,
-                        onSubmitted: (_) => FocusScope.of(context).nextFocus(),
-                      ),
-                      SizedBox(height: 10),
-                      TextField(
-                        controller: _passwordController,
-                        decoration: InputDecoration(labelText: 'Password'),
-                        obscureText: true,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => _fetchData(),
-                      ),
-                      SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _fetchData,
-                        child: Text('Login'),
-                      ),
-                      SizedBox(height: 20),
-                      Text(_response),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => SignupPage(),
-                            ),
-                          );
-                        },
-                        child: Text('Don\'t have an account? Sign up'),
-                      ),
-                    ],
-                  ),
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/skywallpaper.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Center(
+          child: _isLoading
+              ? CircularProgressIndicator()
+              : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextField(
+                      controller: _usernameController,
+                      decoration: InputDecoration(labelText: 'Username'),
+                      textInputAction: TextInputAction.next,
+                      onSubmitted: (_) => FocusScope.of(context).nextFocus(),
+                    ),
+                    SizedBox(height: 10),
+                    TextField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(labelText: 'Password'),
+                      obscureText: true,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _fetchData(),
+                    ),
+                    SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _fetchData,
+                      child: Text('Login'),
+                    ),
+                    SizedBox(height: 20),
+                    Text(_response),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => SignupPage(),
+                          ),
+                        );
+                      },
+                      child: Text('Don\'t have an account? Sign up'),
+                    ),
+                  ],
                 ),
+              ),
+        ),
       ),
     );
   }
@@ -362,35 +389,42 @@ class _SignupPageState extends State<SignupPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Signup Page')),
-      body: Center(
-        child:
-            _isLoading
-                ? CircularProgressIndicator()
-                : Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      TextField(
-                        controller: _usernameController,
-                        decoration: InputDecoration(labelText: 'Username'),
-                      ),
-                      SizedBox(height: 10),
-                      TextField(
-                        controller: _passwordController,
-                        decoration: InputDecoration(labelText: 'Password'),
-                        obscureText: true,
-                      ),
-                      SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _signup,
-                        child: Text('Sign Up'),
-                      ),
-                      SizedBox(height: 20),
-                      Text(_response),
-                    ],
-                  ),
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/skywallpaper.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Center(
+          child: _isLoading
+              ? CircularProgressIndicator()
+              : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextField(
+                      controller: _usernameController,
+                      decoration: InputDecoration(labelText: 'Username'),
+                    ),
+                    SizedBox(height: 10),
+                    TextField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(labelText: 'Password'),
+                      obscureText: true,
+                    ),
+                    SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _signup,
+                      child: Text('Sign Up'),
+                    ),
+                    SizedBox(height: 20),
+                    Text(_response),
+                  ],
                 ),
+              ),
+        ),
       ),
     );
   }
@@ -447,69 +481,92 @@ class _HomePageState extends State<HomePage> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7), // Change background color to a whity orange
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const SizedBox(height: 32),
-            Expanded(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: 500),
-                  child: GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2, // Number of columns
-                      crossAxisSpacing: 20, // Horizontal spacing
-                      mainAxisSpacing: 20, // Vertical spacing
-                    ),
-                    itemCount: buttonData.length, // Dynamically set based on buttonData
-                    itemBuilder: (context, index) {
-                      return ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => InsidePage(
-                                title: buttonData[index]['title']!,
-                                link: buttonData[index]['link']!,
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/skywallpaper.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 32),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: 500),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0), // Add horizontal padding to the grid
+                      child: GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2, // Number of columns
+                          crossAxisSpacing: 20, // Horizontal spacing
+                          mainAxisSpacing: 20, // Vertical spacing
+                        ),
+                        itemCount: buttonData.length, // Dynamically set based on buttonData
+                        itemBuilder: (context, index) {
+                          return Container(
+                            margin: const EdgeInsets.all(8.0), // Add margin around each button
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => InsidePage(
+                                      title: buttonData[index]['title']!,
+                                      link: buttonData[index]['link']!,
+                                    ),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color.fromARGB(255, 89, 129, 91), // Dark green background
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(40),
+                                ),
+                                padding: EdgeInsets.all(kIsWeb ? 24 : 40), // smaller on web
+                              ),
+                              child: Text(
+                                buttonData[index]['title']!,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: 1.2,
+                                ),
                               ),
                             ),
                           );
                         },
-                        style: ElevatedButton.styleFrom(
-                          shape: const CircleBorder(),
-                          padding: EdgeInsets.all(kIsWeb ? 24 : 40), // smaller on web
-                        ),
-                        child: Text(
-                          buttonData[index]['title']!,
-                          style: const TextStyle(fontSize: 20),
-                        ),
-                      );
-                    },
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-            // ElevatedButton(
-            //   onPressed: () {
-            //     Navigator.of(context).push(
-            //       MaterialPageRoute(
-            //         builder: (context) => HtmlContentPage(
-            //           htmlData: '''
-            //             <h1>Hello World</h1>
-            //             <p>This is <b>HTML</b> rendered in Flutter!</p>
-            //             <ul>
-            //               <li>Item 1</li>
-            //               <li>Item 2</li>
-            //             </ul>
-            //           '''.replaceAll("\n", ""),
-            //         ),
-            //       ),
-            //     );
-            //   },
-            //   child: Text('Try HTML Content'),
-            // ),
-          ],
+              // ElevatedButton(
+              //   onPressed: () {
+              //     Navigator.of(context).push(
+              //       MaterialPageRoute(
+              //         builder: (context) => HtmlContentPage(
+              //           htmlData: '''
+              //             <h1>Hello World</h1>
+              //             <p>This is <b>HTML</b> rendered in Flutter!</p>
+              //             <ul>
+              //               <li>Item 1</li>
+              //               <li>Item 2</li>
+              //             </ul>
+              //           '''.replaceAll("\n", ""),
+              //         ),
+              //       ),
+              //     );
+              //   },
+              //   child: Text('Try HTML Content'),
+              // ),
+            ],
+          ),
         ),
       ),
     );
@@ -679,8 +736,11 @@ class _InsidePageState extends State<InsidePage>
       appBar: AppBar(
         title: Text(
           widget.title,
-          style: TextStyle(color: Colors.black, fontSize: 18),
+          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
+          
         ),
+        backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7), // Change background color to a whity orange
+      
         actions: [
           IconButton(
             icon: Icon(Icons.note),
@@ -742,7 +802,15 @@ class _InsidePageState extends State<InsidePage>
           ),
         ],
       ),
-      body: (kIsWeb && _showNotes) ? SizedBox.shrink() : _webIframeView,
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/skywallpaper.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: (kIsWeb && _showNotes) ? SizedBox.shrink() : _webIframeView,
+      ),
     );
   }
 }
@@ -947,10 +1015,15 @@ class _NotesPageState extends State<NotesPage> {
       onWillPop: _onWillPop, // Handle back navigation
       child: Scaffold(
         appBar: AppBar(
-          title: Text(
-            '${widget.title} - Notes',
-            style: TextStyle(color: Colors.black, fontSize: 18),
+          title: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '${widget.title} - Notes',
+              style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ),
+          backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7), // Change background color to a whity orange
+      
           leading: IconButton(
             icon: Icon(Icons.arrow_back),
             onPressed: () {
@@ -962,39 +1035,47 @@ class _NotesPageState extends State<NotesPage> {
             },
           ),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 16), // Spacing
-             Expanded(
-                child: TextField(
-                  controller: _notesController,
-                  maxLines: null,
-                  enabled: !_isLoading,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'Notes',
-                    hintText: 'Write your notes here...',
+        body: Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/skywallpaper.jpg'),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                const SizedBox(height: 16), // Spacing
+               Expanded(
+                  child: TextField(
+                    controller: _notesController,
+                    maxLines: null,
+                    enabled: !_isLoading,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Notes',
+                      hintText: 'Write your notes here...',
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _isNotesChanged = true;
+                      });
+                    },
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      _isNotesChanged = true;
-                    });
-                  },
                 ),
-              ),
-              const SizedBox(height: 16), // Spacing
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _saveNotes,
-                    child: const Text('Save Notes'),
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 16), // Spacing
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : _saveNotes,
+                      child: const Text('Save Notes'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1085,15 +1166,23 @@ class _AdminPageState extends State<AdminPage> {
     final columns = users[0].keys.toList();
     return Scaffold(
       appBar: AppBar(title: Text('Admin Panel')),
-      body: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columns: columns.map((col) => DataColumn(label: Text(col))).toList(),
-          rows: users.map((row) {
-            return DataRow(
-              cells: columns.map((col) => DataCell(Text('${row[col]}'))).toList(),
-            );
-          }).toList(),
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/skywallpaper.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columns: columns.map((col) => DataColumn(label: Text(col))).toList(),
+            rows: users.map((row) {
+              return DataRow(
+                cells: columns.map((col) => DataCell(Text('${row[col]}'))).toList(),
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
@@ -1224,8 +1313,10 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
       appBar: AppBar(
         title: Text(
           '${widget.habitTitle} - History',
-          style: TextStyle(color: Colors.black, fontSize: 18),
+          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
         ),
+        backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7), // Change background color to a whity orange
+      
         actions: [
           IconButton(
             icon: Icon(Icons.arrow_back_ios),
@@ -1245,62 +1336,70 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
           ),
         ],
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : Center(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: getSevenDays().map((date) {
-                    int weekday = date.weekday % 7;
-                    final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-                    final state = habitMap[dateKey] ?? 0;
-                    IconData icon;
-                    Color color;
-                    if (state == 1) {
-                      icon = Icons.check_box;
-                      color = Colors.green;
-                    } else if (state == -1) {
-                      icon = Icons.close;
-                      color = Colors.red;
-                    } else {
-                      icon = Icons.check_box_outline_blank;
-                      color = Colors.grey;
-                    }
-                    final now = DateTime.now();
-                    final today = DateTime(now.year, now.month, now.day+1);
-                    final isFuture = date.isAfter(today);
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(weekDays[weekday], style: TextStyle(fontWeight: FontWeight.bold)),
-                          SizedBox(height: 4),
-                          Text('${date.day}/${date.month}', style: TextStyle(fontSize: 16)),
-                          SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: isFuture ? null : () {
-                              int newState;
-                              if (state == 0) {
-                                newState = 1;
-                              } else if (state == 1) {
-                                newState = -1;
-                              } else {
-                                newState = 0;
-                              }
-                              _setHabitStateForDate(date, newState);
-                            },
-                            child: Icon(icon, color: isFuture ? Colors.grey[300] : color, size: 40),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/skywallpaper.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: isLoading
+            ? Center(child: CircularProgressIndicator())
+            : Center(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: getSevenDays().map((date) {
+                      int weekday = date.weekday % 7;
+                      final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+                      final state = habitMap[dateKey] ?? 0;
+                      IconData icon;
+                      Color color;
+                      if (state == 1) {
+                        icon = Icons.check_box;
+                        color = Colors.green;
+                      } else if (state == -1) {
+                        icon = Icons.close;
+                        color = Colors.red;
+                      } else {
+                        icon = Icons.check_box_outline_blank;
+                        color = Colors.grey;
+                      }
+                      final now = DateTime.now();
+                      final today = DateTime(now.year, now.month, now.day+1);
+                      final isFuture = date.isAfter(today);
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(weekDays[weekday], style: TextStyle(fontWeight: FontWeight.bold)),
+                            SizedBox(height: 4),
+                            Text('${date.day}/${date.month}', style: TextStyle(fontSize: 16)),
+                            SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: isFuture ? null : () {
+                                int newState;
+                                if (state == 0) {
+                                  newState = 1;
+                                } else if (state == 1) {
+                                  newState = -1;
+                                } else {
+                                  newState = 0;
+                                }
+                                _setHabitStateForDate(date, newState);
+                              },
+                              child: Icon(icon, color: isFuture ? Colors.grey[300] : color, size: 40),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
-            ),
+      ),
     );
   }
 }
