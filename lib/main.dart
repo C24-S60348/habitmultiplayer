@@ -76,19 +76,33 @@ class _SplashScreenState extends State<SplashScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Habit Multiplayer',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  '🌟 Habit Multiplayer 🌟',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
+                    letterSpacing: 2,
+                    color: Colors.blueGrey[900],
+                    shadows: [
+                      Shadow(
+                        blurRadius: 8,
+                        color: Colors.blueGrey.withOpacity(0.3),
+                        offset: Offset(2, 2),
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 32), // Spacing
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.yellow.withOpacity(0.3),
+                    color: const Color.fromARGB(255, 170, 247, 93).withOpacity(0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'Logged in as: $loggedInUser',
-                    style: TextStyle(fontSize: 18, color: Colors.blueGrey),
+                    'Welcome, $loggedInUser',
+                    style: TextStyle(fontSize: 18, color: const Color.fromARGB(255, 121, 133, 139)),
                   ),
                 ),
                 SizedBox(height: 32), // Spacing
@@ -124,27 +138,71 @@ class _SplashScreenState extends State<SplashScreen> {
                 
                 
                 const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => LoginPage(), // Assuming LoginPage is defined
+                if (loggedInUser == 'guest')
+                  Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => LoginPage(),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    );
-                  },
-                  child: Text('Go to Login Page'),
+                      padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                      backgroundColor: Colors.blueGrey,
+                      shadowColor: Colors.black.withOpacity(0.5),
+                      elevation: 10,
+                    ),
+                    child: Text(
+                      'Login',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.logout),
-                  onPressed: () async {
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.remove('loggedInUsername'); // Clear the logged-in user
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => SplashScreen()),
-                      (route) => false,
-                    );
-                  },
-                ),
+                if (loggedInUser != 'guest')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.remove('loggedInUsername'); // Clear the logged-in user
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (_) => SplashScreen()),
+                          (route) => false,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                        backgroundColor: Colors.blueGrey,
+                        shadowColor: Colors.black.withOpacity(0.5),
+                        elevation: 10,
+                      ),
+                      child: Text(
+                        'Logout',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins',
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -237,7 +295,15 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Login Page')),
+      appBar: AppBar(
+        title: Text(
+          'Welcome Back!',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7), // soft orange, matches home
+        elevation: 0,
+      ),
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
@@ -270,7 +336,24 @@ class _LoginPageState extends State<LoginPage> {
                     SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: _fetchData,
-                      child: Text('Login'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueGrey,
+                        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 4,
+                      ),
+                      child: Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins',
+                          letterSpacing: 1.5,
+                        ),
+                      ),
                     ),
                     SizedBox(height: 20),
                     Text(_response),
@@ -388,7 +471,14 @@ class _SignupPageState extends State<SignupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Signup Page')),
+      appBar: AppBar(
+        title: Text(
+          'Signup Page',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7),
+      ),
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
@@ -417,7 +507,25 @@ class _SignupPageState extends State<SignupPage> {
                     SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: _signup,
-                      child: Text('Sign Up'),
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                        backgroundColor: Colors.blueGrey,
+                        shadowColor: Colors.black.withOpacity(0.5),
+                        elevation: 10,
+                      ),
+                      child: Text(
+                        'Sign Up',
+                        style: TextStyle(
+                          fontSize: 22,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins',
+                          letterSpacing: 1.2,
+                        ),
+                      ),
                     ),
                     SizedBox(height: 20),
                     Text(_response),
@@ -446,12 +554,90 @@ final buttonData = [
     'link':
         'https://www.nerdfitness.com/wp-content/uploads/2021/02/Beginner-Bodyweight-Workout-Infographic-scaled.jpg',
   },
-  {'title': 'Jog', 'link': 'https://www.jogging.com'},
+  {'title': 'Jog', 'link': 'https://www.finishline.com/'},
   {'title': 'Meditasi', 'link': 'https://www.meditation.com'},
 ];
 
 class _HomePageState extends State<HomePage> {
   String loggedInUser = '';
+
+  Color _colorFromThirdLetterLightMode(String title) {
+    if (title.length < 3) return Colors.blueGrey;
+    
+    final thirdLetter = title[2].toLowerCase();
+    final colors = {
+      'a': Color(0xFFE57373), // Light Red
+      'b': Color(0xFF81C784), // Light Green
+      'c': Color(0xFF64B5F6), // Light Blue
+      'd': Color(0xFFFFB74D), // Light Orange
+      'e': Color(0xFFBA68C8), // Light Purple
+      'f': Color(0xFF4DB6AC), // Teal
+      'g': Color(0xFFFFD54F), // Yellow
+      'h': Color(0xFF7986CB), // Indigo
+      'i': Color(0xFFF06292), // Pink
+      'j': Color(0xFF4DD0E1), // Cyan
+      'k': Color(0xFFFF8A65), // Deep Orange
+      'l': Color(0xFF9575CD), // Deep Purple
+      'm': Color(0xFF4FC3F7), // Light Blue
+      'n': Color(0xFFFFB74D), // Orange
+      'o': Color(0xFF81C784), // Green
+      'p': Color(0xFFBA68C8), // Purple
+      'q': Color(0xFF4DB6AC), // Teal
+      'r': Color(0xFFE57373), // Red
+      's': Color(0xFF64B5F6), // Blue
+      't': Color(0xFFFFD54F), // Yellow
+      'u': Color(0xFF7986CB), // Indigo
+      'v': Color(0xFFF06292), // Pink
+      'w': Color(0xFF4DD0E1), // Cyan
+      'x': Color(0xFFFF8A65), // Deep Orange
+      'y': Color(0xFF9575CD), // Deep Purple
+      'z': Color(0xFF4FC3F7), // Light Blue
+    };
+    
+    return colors[thirdLetter] ?? Colors.blueGrey;
+  }
+
+  Color _colorFromThirdLetterDarkMode(String title) {
+    if (title.length < 3) return Colors.blueGrey.shade800;
+    
+    final thirdLetter = title[2].toLowerCase();
+    final colors = {
+      'a': Color(0xFFB71C1C), // Dark Red
+      'b': Color(0xFF1B5E20), // Dark Green
+      'c': Color(0xFF0D47A1), // Dark Blue
+      'd': Color(0xFFE65100), // Dark Orange
+      'e': Color(0xFF4A148C), // Dark Purple
+      'f': Color(0xFF004D40), // Dark Teal
+      'g': Color(0xFFF57F17), // Dark Yellow
+      'h': Color(0xFF1A237E), // Dark Indigo
+      'i': Color(0xFF880E4F), // Dark Pink
+      'j': Color(0xFF006064), // Dark Cyan
+      'k': Color(0xFFBF360C), // Dark Deep Orange
+      'l': Color(0xFF4A148C), // Dark Deep Purple
+      'm': Color(0xFF01579B), // Dark Light Blue
+      'n': Color(0xFFE65100), // Dark Orange
+      'o': Color(0xFF1B5E20), // Dark Green
+      'p': Color(0xFF4A148C), // Dark Purple
+      'q': Color(0xFF004D40), // Dark Teal
+      'r': Color(0xFFB71C1C), // Dark Red
+      's': Color(0xFF0D47A1), // Dark Blue
+      't': Color(0xFFF57F17), // Dark Yellow
+      'u': Color(0xFF1A237E), // Dark Indigo
+      'v': Color(0xFF880E4F), // Dark Pink
+      'w': Color(0xFF006064), // Dark Cyan
+      'x': Color(0xFFBF360C), // Dark Deep Orange
+      'y': Color(0xFF4A148C), // Dark Deep Purple
+      'z': Color(0xFF01579B), // Dark Light Blue
+    };
+    
+    return colors[thirdLetter] ?? Colors.blueGrey.shade800;
+  }
+
+  bool _isDarkMode = true; // Add this state variable
+
+  Color _colorFromThirdLetter(String title) {
+    return _isDarkMode ? _colorFromThirdLetterDarkMode(title) : _colorFromThirdLetterLightMode(title);
+  }
 
   @override
   void initState() {
@@ -477,11 +663,21 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Complete All',
+          'Complete All Habits',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7), // Change background color to a whity orange
+        backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7),
+        actions: [
+          IconButton(
+            icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode),
+            onPressed: () {
+              setState(() {
+                _isDarkMode = !_isDarkMode;
+              });
+            },
+          ),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -523,11 +719,10 @@ class _HomePageState extends State<HomePage> {
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color.fromARGB(255, 89, 129, 91), // Dark green background
+                                backgroundColor: _colorFromThirdLetter(buttonData[index]['title']!),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(40),
+                                  borderRadius: BorderRadius.circular(50),
                                 ),
-                                padding: EdgeInsets.all(kIsWeb ? 24 : 40), // smaller on web
                               ),
                               child: Text(
                                 buttonData[index]['title']!,
@@ -537,6 +732,9 @@ class _HomePageState extends State<HomePage> {
                                   color: Colors.white,
                                   letterSpacing: 1.2,
                                 ),
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 3,
                               ),
                             ),
                           );
