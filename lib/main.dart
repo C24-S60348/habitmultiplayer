@@ -562,6 +562,8 @@ final buttonData = [
 
 class _HomePageState extends State<HomePage> {
   String loggedInUser = '';
+  final TextEditingController _habitTitleController = TextEditingController();
+  final TextEditingController _habitLinkController = TextEditingController();
 
   Color _colorFromThirdLetterLightMode(String title) {
     if (title.length < 3) return Colors.blueGrey;
@@ -645,6 +647,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _getLoggedInUser();
+    _loadHabits();
   }
 
   @override
@@ -658,6 +661,303 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       loggedInUser = prefs.getString('loggedInUsername') ?? 'guest';
     });
+  }
+
+  Future<void> _showAddHabitDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Add New Habit'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _habitTitleController,
+                decoration: InputDecoration(
+                  labelText: 'Habit Title',
+                  hintText: 'e.g., Read Books',
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: _habitLinkController,
+                decoration: InputDecoration(
+                  labelText: 'Habit Link (Optional)',
+                  hintText: 'e.g., https://example.com',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            CustomButton(
+              text: 'Add Habit',
+              onPressed: () async {
+                if (_habitTitleController.text.isNotEmpty) {
+                  await _addNewHabit(
+                    _habitTitleController.text,
+                    _habitLinkController.text,
+                  );
+                  Navigator.of(context).pop();
+                  _habitTitleController.clear();
+                  _habitLinkController.clear();
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _addNewHabit(String title, String link) async {
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('loggedInUsername') ?? 'guest';
+    final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
+
+    // First, get the current habits
+    final getResponse = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          SELECT habits FROM habitmultiplayer
+          WHERE username = '$username'
+        ''',
+      }),
+    );
+
+    Map<String, dynamic> habitsMap = {};
+    if (getResponse.statusCode == 200) {
+      final data = jsonDecode(getResponse.body);
+      final results = data['results'];
+      if (results != null && results.isNotEmpty) {
+        try {
+          final habitsText = results[0]['habits'];
+          if (habitsText != null && habitsText.isNotEmpty) {
+            habitsMap = jsonDecode(habitsText);
+          }
+        } catch (_) {
+          habitsMap = {};
+        }
+      }
+    }
+
+    // Generate a unique ID for the new habit
+    final habitId = DateTime.now().millisecondsSinceEpoch.toString();
+
+    // Add the new habit with ID
+    habitsMap[habitId] = {
+      'title': title,
+      'link': link,
+      'created_at': DateTime.now().toIso8601String(),
+      'last_updated': DateTime.now().toIso8601String(),
+    };
+
+    // Convert to string and escape for SQL
+    final habitsText = jsonEncode(habitsMap)
+        .replaceAll(r'\', r'\\')
+        .replaceAll("'", "''");
+
+    // Save to server
+    await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          UPDATE habitmultiplayer
+          SET habits = '$habitsText'
+          WHERE username = '$username'
+        ''',
+      }),
+    );
+
+    // Update the local buttonData
+    setState(() {
+      buttonData.add({
+        'id': habitId,
+        'title': title,
+        'link': link.isEmpty ? 'https://example.com' : link,
+      });
+    });
+  }
+
+  Future<void> _editHabit(String habitId, String newTitle, String newLink) async {
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('loggedInUsername') ?? 'guest';
+    final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
+
+    // First, get the current habits
+    final getResponse = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          SELECT habits FROM habitmultiplayer
+          WHERE username = '$username'
+        ''',
+      }),
+    );
+
+    Map<String, dynamic> habitsMap = {};
+    if (getResponse.statusCode == 200) {
+      final data = jsonDecode(getResponse.body);
+      final results = data['results'];
+      if (results != null && results.isNotEmpty) {
+        try {
+          final habitsText = results[0]['habits'];
+          if (habitsText != null && habitsText.isNotEmpty) {
+            habitsMap = jsonDecode(habitsText);
+          }
+        } catch (_) {
+          habitsMap = {};
+        }
+      }
+    }
+
+    // Update the habit
+    if (habitsMap.containsKey(habitId)) {
+      final habit = habitsMap[habitId];
+      habit['title'] = newTitle;
+      habit['link'] = newLink;
+      habit['last_updated'] = DateTime.now().toIso8601String();
+
+      // Convert to string and escape for SQL
+      final habitsText = jsonEncode(habitsMap)
+          .replaceAll(r'\', r'\\')
+          .replaceAll("'", "''");
+
+      // Save to server
+      await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'password': 'afwan',
+          'query': '''
+            UPDATE habitmultiplayer
+            SET habits = '$habitsText'
+            WHERE username = '$username'
+          ''',
+        }),
+      );
+
+      // Update the local buttonData
+      setState(() {
+        final index = buttonData.indexWhere((item) => item['id'] == habitId);
+        if (index != -1) {
+          buttonData[index]['title'] = newTitle;
+          buttonData[index]['link'] = newLink.isEmpty ? 'https://example.com' : newLink;
+        }
+      });
+    }
+  }
+
+  Future<void> _showEditHabitDialog(BuildContext context, String habitId, String currentTitle, String currentLink) async {
+    final TextEditingController titleController = TextEditingController(text: currentTitle);
+    final TextEditingController linkController = TextEditingController(text: currentLink);
+
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Edit Habit'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(
+                  labelText: 'Habit Title',
+                  hintText: 'e.g., Read Books',
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: linkController,
+                decoration: InputDecoration(
+                  labelText: 'Habit Link (Optional)',
+                  hintText: 'e.g., https://example.com',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            CustomButton(
+              text: 'Save Changes',
+              onPressed: () async {
+                if (titleController.text.isNotEmpty) {
+                  await _editHabit(
+                    habitId,
+                    titleController.text,
+                    linkController.text,
+                  );
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _loadHabits() async {
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('loggedInUsername') ?? 'guest';
+    final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          SELECT habits FROM habitmultiplayer
+          WHERE username = '$username'
+        ''',
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final results = data['results'];
+      if (results != null && results.isNotEmpty) {
+        try {
+          final habitsText = results[0]['habits'];
+          if (habitsText != null && habitsText.isNotEmpty) {
+            final habitsMap = jsonDecode(habitsText);
+            setState(() {
+              // Clear existing buttonData and add new habits
+              buttonData.clear();
+              habitsMap.forEach((id, data) {
+                buttonData.add({
+                  'id': id,
+                  'title': data['title'] ?? '',
+                  'link': data['link'] ?? 'https://example.com',
+                });
+              });
+            });
+          }
+        } catch (e) {
+          print('Error loading habits: $e');
+        }
+      }
+    }
   }
 
   @override
@@ -698,17 +998,17 @@ class _HomePageState extends State<HomePage> {
                   child: ConstrainedBox(
                     constraints: BoxConstraints(maxWidth: 500),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0), // Add horizontal padding to the grid
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: GridView.builder(
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2, // Number of columns
-                          crossAxisSpacing: 20, // Horizontal spacing
-                          mainAxisSpacing: 20, // Vertical spacing
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 20,
+                          mainAxisSpacing: 20,
                         ),
-                        itemCount: buttonData.length, // Dynamically set based on buttonData
+                        itemCount: buttonData.length,
                         itemBuilder: (context, index) {
                           return Container(
-                            margin: const EdgeInsets.all(8.0), // Add margin around each button
+                            margin: const EdgeInsets.all(8.0),
                             child: ElevatedButton(
                               onPressed: () {
                                 Navigator.of(context).push(
@@ -716,8 +1016,17 @@ class _HomePageState extends State<HomePage> {
                                     builder: (context) => InsidePage(
                                       title: buttonData[index]['title']!,
                                       link: buttonData[index]['link']!,
+                                      habitId: buttonData[index]['id']!,
                                     ),
                                   ),
+                                );
+                              },
+                              onLongPress: () {
+                                _showEditHabitDialog(
+                                  context,
+                                  buttonData[index]['id']!,
+                                  buttonData[index]['title']!,
+                                  buttonData[index]['link']!,
                                 );
                               },
                               style: ElevatedButton.styleFrom(
@@ -746,25 +1055,15 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              // ElevatedButton(
-              //   onPressed: () {
-              //     Navigator.of(context).push(
-              //       MaterialPageRoute(
-              //         builder: (context) => HtmlContentPage(
-              //           htmlData: '''
-              //             <h1>Hello World</h1>
-              //             <p>This is <b>HTML</b> rendered in Flutter!</p>
-              //             <ul>
-              //               <li>Item 1</li>
-              //               <li>Item 2</li>
-              //             </ul>
-              //           '''.replaceAll("\n", ""),
-              //         ),
-              //       ),
-              //     );
-              //   },
-              //   child: Text('Try HTML Content'),
-              // ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 32.0),
+                child: CustomButton(
+                  text: 'Add New Habit',
+                  onPressed: () {
+                    _showAddHabitDialog(context);
+                  },
+                ),
+              ),
             ],
           ),
         ),
@@ -775,10 +1074,16 @@ class _HomePageState extends State<HomePage> {
 
 //--------- InsidePage with Tab Navigation
 class InsidePage extends StatefulWidget {
-  final String title;
-  final String link;
+  final String habitId;
+  String title;
+  String link;
 
-  const InsidePage({super.key, required this.title, required this.link});
+  InsidePage({
+    super.key, 
+    required this.title, 
+    required this.link,
+    required this.habitId,
+  });
 
   @override
   _InsidePageState createState() => _InsidePageState();
@@ -787,7 +1092,7 @@ class InsidePage extends StatefulWidget {
 class _InsidePageState extends State<InsidePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  late final WebIframeView _webIframeView;
+  late WebIframeView _webIframeView;
   bool _showNotes = false;
   int _habitState = 0; // 0: blank, 1: ticked, 2: X
 
@@ -924,6 +1229,26 @@ class _InsidePageState extends State<InsidePage>
     }
   }
 
+  void _navigateToEditPage() async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => EditHabitPage(
+          habitId: widget.habitId,
+          currentTitle: widget.title,
+          currentLink: widget.link,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        widget.title = result['title'];
+        widget.link = result['link'];
+        _webIframeView = WebIframeView(url: widget.link);
+      });
+    }
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -934,13 +1259,19 @@ class _InsidePageState extends State<InsidePage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.title,
-          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
-          
+        title: GestureDetector(
+          onTap: _navigateToEditPage,
+          child: Text(
+            widget.title,
+            style: TextStyle(
+              color: Colors.black, 
+              fontSize: 18, 
+              fontWeight: FontWeight.bold,
+              decoration: TextDecoration.underline,
+            ),
+          ),
         ),
-        backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7), // Change background color to a whity orange
-      
+        backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7),
         actions: [
           IconButton(
             icon: Icon(Icons.note),
@@ -951,37 +1282,6 @@ class _InsidePageState extends State<InsidePage>
                   builder: (context) => NotesPage(title: widget.title),
                 ),
               );
-              // if (kIsWeb) {
-              //   setState(() {
-              //     _showNotes = true;
-              //   });
-              //   showModalBottomSheet(
-              //     context: context,
-              //     isScrollControlled: true,
-              //     builder: (context) => FractionallySizedBox(
-              //       heightFactor: 0.85,
-              //       child: NotesPage(title: widget.title, onClose: () {
-              //         setState(() {
-              //           _showNotes = false;
-              //         });
-              //         Navigator.of(context).pop();
-              //       }),
-              //     ),
-              //   ).whenComplete(() {
-              //     setState(() {
-              //       _showNotes = false;
-              //     });
-              //   });
-              // } else {
-              //   showModalBottomSheet(
-              //     context: context,
-              //     isScrollControlled: true,
-              //     builder: (context) => FractionallySizedBox(
-              //       heightFactor: 0.85,
-              //       child: NotesPage(title: widget.title),
-              //     ),
-              //   );
-              // }
             },
           ),
           IconButton(
@@ -1615,6 +1915,175 @@ class HtmlContentPage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Html(
           data: htmlData,
+        ),
+      ),
+    );
+  }
+}
+
+// Add new EditHabitPage class
+class EditHabitPage extends StatefulWidget {
+  final String habitId;
+  final String currentTitle;
+  final String currentLink;
+
+  const EditHabitPage({
+    super.key,
+    required this.habitId,
+    required this.currentTitle,
+    required this.currentLink,
+  });
+
+  @override
+  _EditHabitPageState createState() => _EditHabitPageState();
+}
+
+class _EditHabitPageState extends State<EditHabitPage> {
+  late TextEditingController _titleController;
+  late TextEditingController _linkController;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.currentTitle);
+    _linkController = TextEditingController(text: widget.currentLink);
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _linkController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveChanges() async {
+    if (_titleController.text.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('loggedInUsername') ?? 'guest';
+    final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
+
+    // First, get the current habits
+    final getResponse = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          SELECT habits FROM habitmultiplayer
+          WHERE username = '$username'
+        ''',
+      }),
+    );
+
+    Map<String, dynamic> habitsMap = {};
+    if (getResponse.statusCode == 200) {
+      final data = jsonDecode(getResponse.body);
+      final results = data['results'];
+      if (results != null && results.isNotEmpty) {
+        try {
+          final habitsText = results[0]['habits'];
+          if (habitsText != null && habitsText.isNotEmpty) {
+            habitsMap = jsonDecode(habitsText);
+          }
+        } catch (_) {
+          habitsMap = {};
+        }
+      }
+    }
+
+    // Update the habit
+    if (habitsMap.containsKey(widget.habitId)) {
+      final habit = habitsMap[widget.habitId];
+      habit['title'] = _titleController.text;
+      habit['link'] = _linkController.text;
+      habit['last_updated'] = DateTime.now().toIso8601String();
+
+      // Convert to string and escape for SQL
+      final habitsText = jsonEncode(habitsMap)
+          .replaceAll(r'\', r'\\')
+          .replaceAll("'", "''");
+
+      // Save to server
+      await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'password': 'afwan',
+          'query': '''
+            UPDATE habitmultiplayer
+            SET habits = '$habitsText'
+            WHERE username = '$username'
+          ''',
+        }),
+      );
+
+      // Pop back to previous page with updated data
+      Navigator.of(context).pop({
+        'title': _titleController.text,
+        'link': _linkController.text,
+      });
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Edit Habit',
+          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/skywallpaper.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              TextField(
+                controller: _titleController,
+                decoration: InputDecoration(
+                  labelText: 'Habit Title',
+                  hintText: 'e.g., Read Books',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: _linkController,
+                decoration: InputDecoration(
+                  labelText: 'Habit Link (Optional)',
+                  hintText: 'e.g., https://example.com',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 32),
+              CustomButton(
+                text: 'Save Changes',
+                onPressed: _isLoading ? () {} : () => _saveChanges(),
+              ),
+            ],
+          ),
         ),
       ),
     );
