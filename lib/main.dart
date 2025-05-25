@@ -11,6 +11,52 @@ import 'dart:convert';
 //------------ Conditional imports
 import 'platform_mobile.dart' if (dart.library.html) 'platform_web.dart';
 
+// Custom Button Widget
+class CustomButton extends StatelessWidget {
+  final String text;
+  final VoidCallback onPressed;
+  final double? width;
+  final double? height;
+  final double fontSize;
+  final EdgeInsetsGeometry? padding;
+
+  const CustomButton({
+    Key? key,
+    required this.text,
+    required this.onPressed,
+    this.width,
+    this.height,
+    this.fontSize = 20,
+    this.padding,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: padding ?? EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+        backgroundColor: Theme.of(context).primaryColor,
+        shadowColor: Colors.black.withOpacity(0.5),
+        elevation: 10,
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: fontSize,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'Poppins',
+          letterSpacing: 1.5,
+        ),
+      ),
+    );
+  }
+}
+
 void main() {
   //runAppEntry();
   runApp(MyApp());
@@ -21,7 +67,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: SplashScreen());
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primaryColor: const Color.fromARGB(255, 62, 83, 93),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 62, 83, 93),
+        ),
+      ),
+      home: SplashScreen(),
+    );
   }
 }
 
@@ -82,7 +137,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     fontWeight: FontWeight.bold,
                     fontFamily: 'Poppins',
                     letterSpacing: 2,
-                    color: Colors.blueGrey[900],
+                    color: Theme.of(context).primaryColor,
                     shadows: [
                       Shadow(
                         blurRadius: 8,
@@ -115,7 +170,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       borderRadius: BorderRadius.circular(50),
                     ),
                     padding: EdgeInsets.all(80),
-                    backgroundColor: Colors.blueGrey,
+                    backgroundColor: Theme.of(context).primaryColor,
                     shadowColor: Colors.black.withOpacity(0.5),
                     elevation: 10,
                   ),
@@ -140,40 +195,23 @@ class _SplashScreenState extends State<SplashScreen> {
                 const SizedBox(height: 32),
                 if (loggedInUser == 'guest')
                   Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => LoginPage(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                      backgroundColor: Colors.blueGrey,
-                      shadowColor: Colors.black.withOpacity(0.5),
-                      elevation: 10,
-                    ),
-                    child: Text(
-                      'Login',
-                      style: TextStyle(
-                        fontSize: 20,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
-                        letterSpacing: 1.5,
-                      ),
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: CustomButton(
+                      text: 'Login',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => LoginPage(),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                ),
                 if (loggedInUser != 'guest')
                   Padding(
                     padding: const EdgeInsets.only(top: 16.0),
-                    child: ElevatedButton(
+                    child: CustomButton(
+                      text: 'Logout',
                       onPressed: () async {
                         final prefs = await SharedPreferences.getInstance();
                         await prefs.remove('loggedInUsername'); // Clear the logged-in user
@@ -182,25 +220,6 @@ class _SplashScreenState extends State<SplashScreen> {
                           (route) => false,
                         );
                       },
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                        backgroundColor: Colors.blueGrey,
-                        shadowColor: Colors.black.withOpacity(0.5),
-                        elevation: 10,
-                      ),
-                      child: Text(
-                        'Logout',
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins',
-                          letterSpacing: 1.5,
-                        ),
-                      ),
                     ),
                   ),
               ],
@@ -334,26 +353,9 @@ class _LoginPageState extends State<LoginPage> {
                       onSubmitted: (_) => _fetchData(),
                     ),
                     SizedBox(height: 20),
-                    ElevatedButton(
+                    CustomButton(
+                      text: 'Login',
                       onPressed: _fetchData,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueGrey,
-                        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 4,
-                      ),
-                      child: Text(
-                        'Login',
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins',
-                          letterSpacing: 1.5,
-                        ),
-                      ),
                     ),
                     SizedBox(height: 20),
                     Text(_response),
@@ -509,17 +511,17 @@ class _SignupPageState extends State<SignupPage> {
                       onPressed: _signup,
                       style: ElevatedButton.styleFrom(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                        backgroundColor: Colors.blueGrey,
+                        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                        backgroundColor: Theme.of(context).primaryColor,
                         shadowColor: Colors.black.withOpacity(0.5),
                         elevation: 10,
                       ),
                       child: Text(
                         'Sign Up',
                         style: TextStyle(
-                          fontSize: 22,
+                          fontSize: 20,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'Poppins',
