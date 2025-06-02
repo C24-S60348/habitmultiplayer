@@ -69,6 +69,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      title: 'Habit Multiplayer',
       theme: ThemeData(
         primaryColor: const Color.fromARGB(255, 62, 83, 93),
         colorScheme: ColorScheme.fromSeed(
