@@ -437,15 +437,54 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
 
-    // Proceed with signup
+    // Create default habits map
+    final defaultHabits = {
+      DateTime.now().millisecondsSinceEpoch.toString(): {
+        'title': 'Baca Al-quran',
+        'link': 'https://quran.com',
+        'created_at': DateTime.now().toIso8601String(),
+        'last_updated': DateTime.now().toIso8601String(),
+      },
+      (DateTime.now().millisecondsSinceEpoch + 1).toString(): {
+        'title': 'Buat app',
+        'link': 'https://flutter.dev',
+        'created_at': DateTime.now().toIso8601String(),
+        'last_updated': DateTime.now().toIso8601String(),
+      },
+      (DateTime.now().millisecondsSinceEpoch + 2).toString(): {
+        'title': 'Workout',
+        'link': 'https://www.nerdfitness.com/wp-content/uploads/2021/02/Beginner-Bodyweight-Workout-Infographic-scaled.jpg',
+        'created_at': DateTime.now().toIso8601String(),
+        'last_updated': DateTime.now().toIso8601String(),
+      },
+      (DateTime.now().millisecondsSinceEpoch + 3).toString(): {
+        'title': 'Jog',
+        'link': 'https://www.finishline.com/',
+        'created_at': DateTime.now().toIso8601String(),
+        'last_updated': DateTime.now().toIso8601String(),
+      },
+      (DateTime.now().millisecondsSinceEpoch + 4).toString(): {
+        'title': 'Meditasi',
+        'link': 'https://www.meditation.com',
+        'created_at': DateTime.now().toIso8601String(),
+        'last_updated': DateTime.now().toIso8601String(),
+      },
+    };
+
+    // Convert habits to JSON string and escape for SQL
+    final habitsJson = jsonEncode(defaultHabits)
+        .replaceAll(r'\', r'\\')
+        .replaceAll("'", "''");
+
+    // Proceed with signup including default habits
     final signupResponse = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'password': 'afwan',
         'query': '''
-          INSERT INTO habitmultiplayer (username, password, notes)
-          VALUES ('$username', '$password', '{}')
+          INSERT INTO habitmultiplayer (username, password, notes, habits)
+          VALUES ('$username', '$password', '{}', '$habitsJson')
         ''',
       }),
     );
