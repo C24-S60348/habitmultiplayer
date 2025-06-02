@@ -2,6 +2,9 @@ name: Deploy Flutter Web to Firebase Hosting
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - build  # Triggers on push to build branch
 
 jobs:
   build-and-deploy:

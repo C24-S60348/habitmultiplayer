@@ -4,7 +4,7 @@ on:
   workflow_dispatch:  # Allows manual trigger
   push:
     branches:
-      - build-apk  # Triggers on push to build-apk branch
+      - build  # Triggers on push to build branch
 
 jobs:
   build:
