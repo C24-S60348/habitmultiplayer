@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - build  # Triggers on push to build branch
+      - build-web  # Triggers on push to build-web branch
 
 jobs:
   build-and-deploy:
