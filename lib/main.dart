@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async'; // Import for Timer
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shimmer/shimmer.dart';
 
 //------------ Conditional imports
 import 'platform_mobile.dart' if (dart.library.html) 'platform_web.dart';
@@ -124,6 +125,10 @@ class _SplashScreenState extends State<SplashScreen> {
           image: DecorationImage(
             image: AssetImage('assets/skywallpaper.jpg'),
             fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.white.withOpacity(0.8), // Adjust opacity here (0.0 to 1.0)
+              BlendMode.softLight, // Try different blend modes: overlay, softLight, hardLight, etc.
+            ),
           ),
         ),
         child: Center(
@@ -329,6 +334,10 @@ class _LoginPageState extends State<LoginPage> {
           image: DecorationImage(
             image: AssetImage('assets/skywallpaper.jpg'),
             fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.white.withOpacity(0.8), // Adjust opacity here (0.0 to 1.0)
+              BlendMode.softLight, // Try different blend modes: overlay, softLight, hardLight, etc.
+            ),
           ),
         ),
         child: Center(
@@ -526,6 +535,10 @@ class _SignupPageState extends State<SignupPage> {
           image: DecorationImage(
             image: AssetImage('assets/skywallpaper.jpg'),
             fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.white.withOpacity(0.8), // Adjust opacity here (0.0 to 1.0)
+              BlendMode.softLight, // Try different blend modes: overlay, softLight, hardLight, etc.
+            ),
           ),
         ),
         child: Center(
@@ -600,10 +613,11 @@ final buttonData = [
   {'title': 'Meditasi', 'link': 'https://www.meditation.com'},
 ];
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   String loggedInUser = '';
   final TextEditingController _habitTitleController = TextEditingController();
   final TextEditingController _habitLinkController = TextEditingController();
+  bool _isLoading = true;
 
   Color _colorFromThirdLetterLightMode(String title) {
     if (title.length < 3) return Colors.blueGrey;
@@ -686,14 +700,26 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _getLoggedInUser();
     _loadHabits();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _getLoggedInUser(); // Reload username every time dependencies change
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadHabits(); // Reload habits when app is resumed
+    }
+  }
+
+  Future<void> _onRefresh() async {
+    await _loadHabits();
   }
 
   Future<void> _getLoggedInUser() async {
@@ -957,47 +983,100 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadHabits() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('loggedInUsername') ?? 'guest';
     final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'password': 'afwan',
-        'query': '''
-          SELECT habits FROM habitmultiplayer
-          WHERE username = '$username'
-        ''',
-      }),
-    );
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'password': 'afwan',
+          'query': '''
+            SELECT habits FROM habitmultiplayer
+            WHERE username = '$username'
+          ''',
+        }),
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final results = data['results'];
-      if (results != null && results.isNotEmpty) {
-        try {
-          final habitsText = results[0]['habits'];
-          if (habitsText != null && habitsText.isNotEmpty) {
-            final habitsMap = jsonDecode(habitsText);
-            setState(() {
-              // Clear existing buttonData and add new habits
-              buttonData.clear();
-              habitsMap.forEach((id, data) {
-                buttonData.add({
-                  'id': id,
-                  'title': data['title'] ?? '',
-                  'link': data['link'] ?? 'https://example.com',
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final results = data['results'];
+        if (results != null && results.isNotEmpty) {
+          try {
+            final habitsText = results[0]['habits'];
+            if (habitsText != null && habitsText.isNotEmpty) {
+              final habitsMap = jsonDecode(habitsText);
+              if (mounted) {
+                setState(() {
+                  buttonData.clear();
+                  habitsMap.forEach((id, data) {
+                    buttonData.add({
+                      'id': id,
+                      'title': data['title'] ?? '',
+                      'link': data['link'] ?? 'https://example.com',
+                    });
+                  });
                 });
-              });
-            });
+              }
+            }
+          } catch (e) {
+            print('Error parsing habits: $e');
           }
-        } catch (e) {
-          print('Error loading habits: $e');
         }
       }
+    } catch (e) {
+      print('Error loading habits: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
+  }
+
+  Widget _buildShimmerGrid() {
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 20,
+        mainAxisSpacing: 20,
+      ),
+      itemCount: 6, // Show 6 shimmer items
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.all(8.0),
+          child: Shimmer.fromColors(
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: Center(
+                child: Text(
+                  'Loading...',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -1011,6 +1090,11 @@ class _HomePageState extends State<HomePage> {
         centerTitle: true,
         backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7),
         actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _loadHabits,
+            tooltip: 'Refresh Habits',
+          ),
           IconButton(
             icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode),
             onPressed: () {
@@ -1026,85 +1110,105 @@ class _HomePageState extends State<HomePage> {
           image: DecorationImage(
             image: AssetImage('assets/skywallpaper.jpg'),
             fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.white.withOpacity(0.8), // Adjust opacity here (0.0 to 1.0)
+              BlendMode.softLight, // Try different blend modes: overlay, softLight, hardLight, etc.
+            ),
           ),
         ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 32),
-              Expanded(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: 500),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 20,
-                          mainAxisSpacing: 20,
-                        ),
-                        itemCount: buttonData.length,
-                        itemBuilder: (context, index) {
-                          return Container(
-                            margin: const EdgeInsets.all(8.0),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => InsidePage(
-                                      title: buttonData[index]['title']!,
-                                      link: buttonData[index]['link']!,
-                                      habitId: buttonData[index]['id']!,
+        child: RefreshIndicator(
+          onRefresh: _onRefresh,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 32),
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: 500),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: _isLoading
+                            ? _buildShimmerGrid()
+                            : buttonData.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      'No habits yet. Add some!',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.grey[600],
+                                      ),
                                     ),
+                                  )
+                                : GridView.builder(
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 20,
+                                      mainAxisSpacing: 20,
+                                    ),
+                                    itemCount: buttonData.length,
+                                    itemBuilder: (context, index) {
+                                      return Container(
+                                        margin: const EdgeInsets.all(8.0),
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (context) => InsidePage(
+                                                  title: buttonData[index]['title']!,
+                                                  link: buttonData[index]['link']!,
+                                                  habitId: buttonData[index]['id']!,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          onLongPress: () {
+                                            _showEditHabitDialog(
+                                              context,
+                                              buttonData[index]['id']!,
+                                              buttonData[index]['title']!,
+                                              buttonData[index]['link']!,
+                                            );
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: _colorFromThirdLetter(buttonData[index]['title']!),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(50),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            buttonData[index]['title']!,
+                                            style: const TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              letterSpacing: 1.2,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 3,
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
-                                );
-                              },
-                              onLongPress: () {
-                                _showEditHabitDialog(
-                                  context,
-                                  buttonData[index]['id']!,
-                                  buttonData[index]['title']!,
-                                  buttonData[index]['link']!,
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _colorFromThirdLetter(buttonData[index]['title']!),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(50),
-                                ),
-                              ),
-                              child: Text(
-                                buttonData[index]['title']!,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 1.2,
-                                ),
-                                textAlign: TextAlign.center,
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 3,
-                              ),
-                            ),
-                          );
-                        },
                       ),
                     ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 32.0),
-                child: CustomButton(
-                  text: 'Add New Habit',
-                  onPressed: () {
-                    _showAddHabitDialog(context);
-                  },
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 32.0),
+                  child: CustomButton(
+                    text: 'Add New Habit',
+                    onPressed: () async {
+                      await _showAddHabitDialog(context);
+                      _loadHabits(); // Reload habits after adding new one
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1319,7 +1423,10 @@ class _InsidePageState extends State<InsidePage>
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => NotesPage(title: widget.title),
+                  builder: (context) => NotesPage(
+                    title: widget.title,
+                    habitId: widget.habitId,
+                  ),
                 ),
               );
             },
@@ -1347,6 +1454,10 @@ class _InsidePageState extends State<InsidePage>
           image: DecorationImage(
             image: AssetImage('assets/skywallpaper.jpg'),
             fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.white.withOpacity(0.8), // Adjust opacity here (0.0 to 1.0)
+              BlendMode.softLight, // Try different blend modes: overlay, softLight, hardLight, etc.
+            ),
           ),
         ),
         child: (kIsWeb && _showNotes) ? SizedBox.shrink() : _webIframeView,
@@ -1358,9 +1469,15 @@ class _InsidePageState extends State<InsidePage>
 //--------note page
 class NotesPage extends StatefulWidget {
   final String title;
+  final String habitId;
   final VoidCallback? onClose;
 
-  const NotesPage({super.key, required this.title, this.onClose});
+  const NotesPage({
+    super.key, 
+    required this.title, 
+    required this.habitId,
+    this.onClose
+  });
 
   @override
   _NotesPageState createState() => _NotesPageState();
@@ -1368,14 +1485,13 @@ class NotesPage extends StatefulWidget {
 
 class _NotesPageState extends State<NotesPage> {
   late TextEditingController _notesController;
-  bool _isNotesChanged = false; // Flag to track unsaved changes
+  bool _isNotesChanged = false;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _notesController = TextEditingController();
-    // Load saved notes
     _loadNotes();
   }
 
@@ -1400,7 +1516,7 @@ class _NotesPageState extends State<NotesPage> {
       body: jsonEncode({
         'password': 'afwan',
         'query': '''
-        SELECT notes FROM habitmultiplayer
+        SELECT notes, habits FROM habitmultiplayer
         WHERE username = '$username'
       ''',
       }),
@@ -1419,8 +1535,17 @@ class _NotesPageState extends State<NotesPage> {
         }
       }
 
-      // Update the specific note for the current habit title
-      notesMap[widget.title] = newNote;
+      // Check if there are notes under the old title-based key
+      final oldNotes = notesMap[widget.title];
+      
+      // Update notes using the habit ID as the key
+      notesMap[widget.habitId] = newNote;
+      
+      // If there were old notes and they're different from the new notes,
+      // keep them for backward compatibility
+      if (oldNotes != null && oldNotes != newNote) {
+        notesMap[widget.title] = oldNotes;
+      }
 
       // Encode the updated map as a valid JSON string
       final updatedJson = jsonEncode(notesMap);
@@ -1476,7 +1601,7 @@ class _NotesPageState extends State<NotesPage> {
       body: jsonEncode({
         'password': 'afwan',
         'query': '''
-        SELECT notes FROM habitmultiplayer
+        SELECT notes, habits FROM habitmultiplayer
         WHERE username = '$username'
       ''',
       }),
@@ -1487,10 +1612,46 @@ class _NotesPageState extends State<NotesPage> {
       final results = data['results'];
       if (results != null && results.isNotEmpty) {
         final notesJson = results[0]['notes'] ?? '{}';
+        final habitsJson = results[0]['habits'] ?? '{}';
 
         try {
-          final decoded = jsonDecode(notesJson);
-          _notesController.text = decoded[widget.title] ?? '';
+          final decodedNotes = jsonDecode(notesJson);
+          final decodedHabits = jsonDecode(habitsJson);
+          Map<String, dynamic> newNotesMap = {};
+
+          // First try to get notes by ID
+          if (decodedNotes.containsKey(widget.habitId)) {
+            _notesController.text = decodedNotes[widget.habitId];
+          } 
+          // If no ID-based notes, check for title-based notes and migrate them
+          else if (decodedNotes.containsKey(widget.title)) {
+            final titleBasedNote = decodedNotes[widget.title];
+            _notesController.text = titleBasedNote;
+            
+            // Migrate the note to ID-based storage
+            newNotesMap = Map<String, dynamic>.from(decodedNotes);
+            newNotesMap[widget.habitId] = titleBasedNote;
+            
+            // Update the server with the migrated notes
+            final updatedJson = jsonEncode(newNotesMap)
+                .replaceAll(r'\', r'\\')
+                .replaceAll("'", "''");
+                
+            await http.post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'password': 'afwan',
+                'query': '''
+                  UPDATE habitmultiplayer
+                  SET notes = '$updatedJson'
+                  WHERE username = '$username'
+                ''',
+              }),
+            );
+          } else {
+            _notesController.text = '';
+          }
         } catch (e) {
           print('Failed to parse notes JSON: $e');
           _notesController.text = '';
@@ -1501,18 +1662,6 @@ class _NotesPageState extends State<NotesPage> {
     }
     setState(() {
       _isLoading = false;
-    });
-  }
-
-  Future<void> _saveNotes() async {
-    final prefs = await SharedPreferences.getInstance();
-    final username = prefs.getString('loggedInUsername') ?? 'guest';
-    final notes = _notesController.text;
-
-    await prefs.setString('notes_${username}_${widget.title}', notes);
-    await _updateNotesOnServer(notes); // Save the notes to server
-    setState(() {
-      _isNotesChanged = false; // Reset the flag after saving
     });
   }
 
@@ -1580,6 +1729,10 @@ class _NotesPageState extends State<NotesPage> {
             image: DecorationImage(
               image: AssetImage('assets/skywallpaper.jpg'),
               fit: BoxFit.cover,
+              colorFilter: ColorFilter.mode(
+                Colors.white.withOpacity(0.8), // Adjust opacity here (0.0 to 1.0)
+                BlendMode.softLight, // Try different blend modes: overlay, softLight, hardLight, etc.
+              ),
             ),
           ),
           child: Padding(
@@ -1609,7 +1762,7 @@ class _NotesPageState extends State<NotesPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     ElevatedButton(
-                      onPressed: _isLoading ? null : _saveNotes,
+                      onPressed: _isLoading ? null : () => _updateNotesOnServer(_notesController.text),
                       child: const Text('Save Notes'),
                     ),
                   ],
@@ -1711,6 +1864,10 @@ class _AdminPageState extends State<AdminPage> {
           image: DecorationImage(
             image: AssetImage('assets/skywallpaper.jpg'),
             fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.white.withOpacity(0.8), // Adjust opacity here (0.0 to 1.0)
+              BlendMode.softLight, // Try different blend modes: overlay, softLight, hardLight, etc.
+            ),
           ),
         ),
         child: SingleChildScrollView(
@@ -1881,6 +2038,10 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
           image: DecorationImage(
             image: AssetImage('assets/skywallpaper.jpg'),
             fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.white.withOpacity(0.8), // Adjust opacity here (0.0 to 1.0)
+              BlendMode.softLight, // Try different blend modes: overlay, softLight, hardLight, etc.
+            ),
           ),
         ),
         child: isLoading
@@ -2094,6 +2255,10 @@ class _EditHabitPageState extends State<EditHabitPage> {
           image: DecorationImage(
             image: AssetImage('assets/skywallpaper.jpg'),
             fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.white.withOpacity(0.8), // Adjust opacity here (0.0 to 1.0)
+              BlendMode.softLight, // Try different blend modes: overlay, softLight, hardLight, etc.
+            ),
           ),
         ),
         child: Padding(
