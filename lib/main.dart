@@ -15,7 +15,7 @@ import 'platform_mobile.dart' if (dart.library.html) 'platform_web.dart';
 // Custom Button Widget
 class CustomButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final double? width;
   final double? height;
   final double fontSize;
@@ -751,7 +751,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 decoration: InputDecoration(
                   labelText: 'Habit Link (Optional)',
                   hintText: 'e.g., https://example.com',
+                  errorText: _habitLinkController.text.isNotEmpty && !DialogUtils.isValidUrl(_habitLinkController.text)
+                      ? 'Please enter a valid URL (e.g., https://example.com)'
+                      : null,
                 ),
+                onChanged: (value) {
+                  setState(() {}); // Trigger rebuild to show/hide error
+                },
               ),
             ],
           ),
@@ -782,7 +788,42 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
+  Future<bool> showLinkValidationDialog(BuildContext context) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Invalid Link'),
+          content: Text('Please enter a valid URL (e.g., https://example.com)'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text('Continue Anyway'),
+            ),
+          ],
+        );
+      },
+    ) ?? false;
+  }
+
   Future<void> _addNewHabit(String title, String link) async {
+    if (link.isEmpty) {
+      final shouldContinue = await DialogUtils.showLinkValidationDialog(context);
+      if (!shouldContinue) return;
+    } else if (!DialogUtils.isValidUrl(link)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter a valid URL (e.g., https://example.com)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('loggedInUsername') ?? 'guest';
     final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
@@ -857,6 +898,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _editHabit(String habitId, String newTitle, String newLink) async {
+    if (newLink.isEmpty) {
+      final shouldContinue = await DialogUtils.showLinkValidationDialog(context);
+      if (!shouldContinue) return;
+    } else if (!DialogUtils.isValidUrl(newLink)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter a valid URL (e.g., https://example.com)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('loggedInUsername') ?? 'guest';
     final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
@@ -952,7 +1006,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 decoration: InputDecoration(
                   labelText: 'Habit Link (Optional)',
                   hintText: 'e.g., https://example.com',
+                  errorText: linkController.text.isNotEmpty && !DialogUtils.isValidUrl(linkController.text)
+                      ? 'Please enter a valid URL (e.g., https://example.com)'
+                      : null,
                 ),
+                onChanged: (value) {
+                  setState(() {}); // Trigger rebuild to show/hide error
+                },
               ),
             ],
           ),
@@ -1111,8 +1171,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             image: AssetImage('assets/skywallpaper.jpg'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
-              Colors.white.withOpacity(0.8), // Adjust opacity here (0.0 to 1.0)
-              BlendMode.softLight, // Try different blend modes: overlay, softLight, hardLight, etc.
+              Colors.white.withOpacity(0.8),
+              BlendMode.softLight,
             ),
           ),
         ),
@@ -1152,8 +1212,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                       return Container(
                                         margin: const EdgeInsets.all(8.0),
                                         child: ElevatedButton(
-                                          onPressed: () {
-                                            Navigator.of(context).push(
+                                          onPressed: () async {
+                                            final result = await Navigator.of(context).push(
                                               MaterialPageRoute(
                                                 builder: (context) => InsidePage(
                                                   title: buttonData[index]['title']!,
@@ -1162,6 +1222,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                 ),
                                               ),
                                             );
+                                            if (result != null && result == true) {
+                                              _loadHabits(); // Refresh the habits list
+                                            }
                                           },
                                           onLongPress: () {
                                             _showEditHabitDialog(
@@ -1385,11 +1448,16 @@ class _InsidePageState extends State<InsidePage>
     );
 
     if (result != null) {
-      setState(() {
-        widget.title = result['title'];
-        widget.link = result['link'];
-        _webIframeView = WebIframeView(url: widget.link);
-      });
+      if (result['deleted'] == true) {
+        // If habit was deleted, pop back to home page and trigger refresh
+        Navigator.of(context).pop(true); // Pass true to indicate deletion
+      } else {
+        setState(() {
+          widget.title = result['title'];
+          widget.link = result['link'];
+          _webIframeView = WebIframeView(url: widget.link);
+        });
+      }
     }
   }
 
@@ -2143,23 +2211,141 @@ class _EditHabitPageState extends State<EditHabitPage> {
   late TextEditingController _titleController;
   late TextEditingController _linkController;
   bool _isLoading = false;
+  bool _isLinkValid = true;
+  bool _isTitleValid = true;
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.currentTitle);
     _linkController = TextEditingController(text: widget.currentLink);
+    _isLinkValid = DialogUtils.isValidUrl(widget.currentLink);
+    _isTitleValid = widget.currentTitle.isNotEmpty;
+  }
+
+  bool get _canSave {
+    return _isTitleValid && 
+           (_linkController.text.isEmpty || _isLinkValid) && 
+           !_isLoading;
   }
 
   @override
-  void dispose() {
-    _titleController.dispose();
-    _linkController.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Edit Habit',
+          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete, color: Colors.red),
+            onPressed: _isLoading ? null : _deleteHabit,
+            tooltip: 'Delete Habit',
+          ),
+        ],
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/skywallpaper.jpg'),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.white.withOpacity(0.8),
+              BlendMode.softLight,
+            ),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              TextField(
+                controller: _titleController,
+                decoration: InputDecoration(
+                  labelText: 'Habit Title',
+                  hintText: 'e.g., Read Books',
+                  border: OutlineInputBorder(),
+                  errorText: !_isTitleValid ? 'Please enter a title' : null,
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _isTitleValid = value.isNotEmpty;
+                  });
+                },
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: _linkController,
+                decoration: InputDecoration(
+                  labelText: 'Habit Link (Optional)',
+                  hintText: 'e.g., https://example.com',
+                  border: OutlineInputBorder(),
+                  errorText: _linkController.text.isNotEmpty && !_isLinkValid
+                      ? 'Please enter a valid URL with proper domain (e.g., https://example.com)'
+                      : null,
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _isLinkValid = DialogUtils.isValidUrl(value);
+                  });
+                },
+              ),
+              SizedBox(height: 32),
+              CustomButton(
+                text: 'Save Changes',
+                onPressed: _canSave ? () => _saveChanges() : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _saveChanges() async {
-    if (_titleController.text.isEmpty) return;
+    if (!_canSave) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please fix the errors before saving'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate title
+    if (!_isTitleValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter a title'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    // Validate URL
+    if (_linkController.text.isNotEmpty && !_isLinkValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter a valid URL with proper domain (e.g., https://example.com)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // If link is empty, show confirmation dialog
+    if (_linkController.text.isEmpty) {
+      final shouldContinue = await DialogUtils.showLinkValidationDialog(context);
+      if (!shouldContinue) return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -2236,61 +2422,147 @@ class _EditHabitPageState extends State<EditHabitPage> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Edit Habit',
-          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/skywallpaper.jpg'),
-            fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(
-              Colors.white.withOpacity(0.8), // Adjust opacity here (0.0 to 1.0)
-              BlendMode.softLight, // Try different blend modes: overlay, softLight, hardLight, etc.
-            ),
+  Future<void> _deleteHabit() async {
+    // Show confirmation dialog
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Habit'),
+        content: Text('Are you sure you want to delete this habit? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel'),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              TextField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  labelText: 'Habit Title',
-                  hintText: 'e.g., Read Books',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              SizedBox(height: 16),
-              TextField(
-                controller: _linkController,
-                decoration: InputDecoration(
-                  labelText: 'Habit Link (Optional)',
-                  hintText: 'e.g., https://example.com',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              SizedBox(height: 32),
-              CustomButton(
-                text: 'Save Changes',
-                onPressed: _isLoading ? () {} : () => _saveChanges(),
-              ),
-            ],
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Delete', style: TextStyle(color: Colors.red)),
           ),
-        ),
+        ],
       ),
     );
+
+    if (shouldDelete != true) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('loggedInUsername') ?? 'guest';
+    final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
+
+    // First, get the current habits
+    final getResponse = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          SELECT habits FROM habitmultiplayer
+          WHERE username = '$username'
+        ''',
+      }),
+    );
+
+    Map<String, dynamic> habitsMap = {};
+    if (getResponse.statusCode == 200) {
+      final data = jsonDecode(getResponse.body);
+      final results = data['results'];
+      if (results != null && results.isNotEmpty) {
+        try {
+          final habitsText = results[0]['habits'];
+          if (habitsText != null && habitsText.isNotEmpty) {
+            habitsMap = jsonDecode(habitsText);
+          }
+        } catch (_) {
+          habitsMap = {};
+        }
+      }
+    }
+
+    // Remove the habit
+    habitsMap.remove(widget.habitId);
+
+    // Convert to string and escape for SQL
+    final habitsText = jsonEncode(habitsMap)
+        .replaceAll(r'\', r'\\')
+        .replaceAll("'", "''");
+
+    // Save to server
+    await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'password': 'afwan',
+        'query': '''
+          UPDATE habitmultiplayer
+          SET habits = '$habitsText'
+          WHERE username = '$username'
+        ''',
+      }),
+    );
+
+    // Pop back to previous page with delete flag
+    Navigator.of(context).pop({'deleted': true});
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _linkController.dispose();
+    super.dispose();
+  }
+}
+
+// Add this class after imports
+class DialogUtils {
+  static bool isValidUrl(String url) {
+    if (url.isEmpty) return true; // Allow empty URLs
+    try {
+      final uri = Uri.parse(url);
+      // Check for valid scheme (http or https)
+      if (uri.scheme != 'http' && uri.scheme != 'https') return false;
+      
+      // Check for valid domain (must have at least one dot and valid TLD)
+      if (!uri.host.contains('.')) return false;
+      
+      // Check for valid path (optional)
+      // Check for valid authority (domain)
+      if (uri.authority.isEmpty) return false;
+      
+      // Additional check for common invalid patterns
+      if (uri.host.endsWith('.') || uri.host.startsWith('.')) return false;
+      
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> showLinkValidationDialog(BuildContext context) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Invalid Link'),
+          content: Text('Please enter a valid URL with proper domain (e.g., https://example.com)'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text('Continue Anyway'),
+            ),
+          ],
+        );
+      },
+    ) ?? false;
   }
 }
