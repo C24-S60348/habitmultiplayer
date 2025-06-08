@@ -2164,7 +2164,7 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
                       final isLoading = _loadingDateKey == dateKey;
 
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
