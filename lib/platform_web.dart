@@ -1,8 +1,5 @@
 import 'dart:ui_web' as ui;
 import 'dart:html' as html;
-import 'dart:io' show Platform;
-import 'package:web/web.dart' as web;
-import 'package:flutter_html_iframe/flutter_html_iframe.dart';
 
 void registerIframe(String viewId, String url) {
   // Register the iframe for web

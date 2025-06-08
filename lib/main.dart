@@ -22,14 +22,14 @@ class CustomButton extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
 
   const CustomButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     this.width,
     this.height,
     this.fontSize = 20,
     this.padding,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -691,7 +691,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return colors[thirdLetter] ?? Colors.blueGrey.shade800;
   }
 
-  bool _isDarkMode = true; // Add this state variable
+  final bool _isDarkMode = true; // Add this state variable
 
   Color _colorFromThirdLetter(String title) {
     return _isDarkMode ? _colorFromThirdLetterDarkMode(title) : _colorFromThirdLetterLightMode(title);
@@ -1300,7 +1300,7 @@ class _InsidePageState extends State<InsidePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late WebIframeView _webIframeView;
-  bool _showNotes = false;
+  final bool _showNotes = false;
   int _habitState = 0; // 0: blank, 1: ticked, 2: X
 
   @override
@@ -1852,7 +1852,7 @@ class WebIframeView extends StatelessWidget {
     return (context, element) => element.localName == 'iframe';
   }
 
-  const WebIframeView({Key? key, required this.url}) : super(key: key);
+  const WebIframeView({super.key, required this.url});
 
   @override
   Widget build(BuildContext context) {
@@ -1872,6 +1872,8 @@ class WebIframeView extends StatelessWidget {
 
 // AdminPage
 class AdminPage extends StatefulWidget {
+  const AdminPage({super.key});
+
   @override
   _AdminPageState createState() => _AdminPageState();
 }
@@ -1957,7 +1959,7 @@ class _AdminPageState extends State<AdminPage> {
 // HabitHistoryPage
 class HabitHistoryPage extends StatefulWidget {
   final String habitTitle;
-  const HabitHistoryPage({Key? key, required this.habitTitle}) : super(key: key);
+  const HabitHistoryPage({super.key, required this.habitTitle});
 
   @override
   _HabitHistoryPageState createState() => _HabitHistoryPageState();
