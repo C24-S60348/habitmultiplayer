@@ -1155,14 +1155,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             onPressed: _loadHabits,
             tooltip: 'Refresh Habits',
           ),
-          IconButton(
-            icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode),
-            onPressed: () {
-              setState(() {
-                _isDarkMode = !_isDarkMode;
-              });
-            },
-          ),
+          // IconButton(
+          //   icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode),
+          //   onPressed: () {
+          //     setState(() {
+          //       _isDarkMode = !_isDarkMode;
+          //     });
+          //   },
+          // ),
         ],
       ),
       body: Container(
@@ -1966,7 +1966,8 @@ class HabitHistoryPage extends StatefulWidget {
 class _HabitHistoryPageState extends State<HabitHistoryPage> {
   Map<String, int> habitMap = {};
   bool isLoading = true;
-  int centerOffset = 0; // 0 = today, -1 = previous, +1 = next, etc.
+  int centerOffset = 0;
+  String? _loadingDateKey; // Add this to track which date is being updated
 
   @override
   void initState() {
@@ -2018,58 +2019,80 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
   static const List<String> weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   Future<void> _setHabitStateForDate(DateTime date, int newState) async {
+    final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    final previousState = habitMap[dateKey] ?? 0;  // Store the previous state
+    
+    // Update the state immediately in the UI
+    setState(() {
+      habitMap[dateKey] = newState;
+      _loadingDateKey = dateKey;
+    });
+
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('loggedInUsername') ?? 'guest';
     final url = Uri.parse('https://afwanproductions.pythonanywhere.com/api/executejsonv2');
-    final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
-    // Get current calendar_tick JSON
-    final getResponse = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'password': 'afwan',
-        'query': '''
-          SELECT calendar_tick FROM habitmultiplayer
-          WHERE username = '$username'
-        '''
-      }),
-    );
+    try {
+      // Get current calendar_tick JSON
+      final getResponse = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'password': 'afwan',
+          'query': '''
+            SELECT calendar_tick FROM habitmultiplayer
+            WHERE username = '$username'
+          '''
+        }),
+      );
 
-    Map<String, dynamic> tickMap = {};
-    if (getResponse.statusCode == 200) {
-      final data = jsonDecode(getResponse.body);
-      final results = data['results'];
-      if (results != null && results.isNotEmpty) {
-        try {
-          tickMap = jsonDecode(results[0]['calendar_tick'] ?? '{}');
-        } catch (_) {
-          tickMap = {};
+      Map<String, dynamic> tickMap = {};
+      if (getResponse.statusCode == 200) {
+        final data = jsonDecode(getResponse.body);
+        final results = data['results'];
+        if (results != null && results.isNotEmpty) {
+          try {
+            tickMap = jsonDecode(results[0]['calendar_tick'] ?? '{}');
+          } catch (_) {
+            tickMap = {};
+          }
         }
       }
+
+      if (!tickMap.containsKey(widget.habitTitle)) tickMap[widget.habitTitle] = {};
+      tickMap[widget.habitTitle][dateKey] = newState;
+
+      // Save to server
+      final updatedJson = jsonEncode(tickMap).replaceAll(r'\', r'\\').replaceAll("'", "''");
+      await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'password': 'afwan',
+          'query': '''
+            UPDATE habitmultiplayer
+            SET calendar_tick = '$updatedJson'
+            WHERE username = '$username'
+          '''
+        }),
+      );
+    } catch (e) {
+      // If there's an error, revert the state
+      setState(() {
+        habitMap[dateKey] = previousState; // Revert to previous state
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update habit state. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      // Clear loading state regardless of success or failure
+      setState(() {
+        _loadingDateKey = null;
+      });
     }
-
-    if (!tickMap.containsKey(widget.habitTitle)) tickMap[widget.habitTitle] = {};
-    tickMap[widget.habitTitle][dateKey] = newState;
-
-    // Save to server
-    final updatedJson = jsonEncode(tickMap).replaceAll(r'\', r'\\').replaceAll("'", "''");
-    await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'password': 'afwan',
-        'query': '''
-          UPDATE habitmultiplayer
-          SET calendar_tick = '$updatedJson'
-          WHERE username = '$username'
-        '''
-      }),
-    );
-
-    setState(() {
-      habitMap[dateKey] = newState;
-    });
   }
 
   @override
@@ -2138,6 +2161,8 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
                       final now = DateTime.now();
                       final today = DateTime(now.year, now.month, now.day+1);
                       final isFuture = date.isAfter(today);
+                      final isLoading = _loadingDateKey == dateKey;
+
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                         child: Column(
@@ -2148,7 +2173,7 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
                             Text('${date.day}/${date.month}', style: TextStyle(fontSize: 16)),
                             SizedBox(height: 8),
                             GestureDetector(
-                              onTap: isFuture ? null : () {
+                              onTap: isFuture || isLoading ? null : () {
                                 int newState;
                                 if (state == 0) {
                                   newState = 1;
@@ -2159,7 +2184,16 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
                                 }
                                 _setHabitStateForDate(date, newState);
                               },
-                              child: Icon(icon, color: isFuture ? Colors.grey[300] : color, size: 40),
+                              child: isLoading
+                                  ? SizedBox(
+                                      width: 40,
+                                      height: 40,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                                      ),
+                                    )
+                                  : Icon(icon, color: isFuture ? Colors.grey[300] : color, size: 40),
                             ),
                           ],
                         ),
@@ -2297,10 +2331,26 @@ class _EditHabitPageState extends State<EditHabitPage> {
                 },
               ),
               SizedBox(height: 32),
-              CustomButton(
-                text: 'Save Changes',
-                onPressed: _canSave ? () => _saveChanges() : null,
-              ),
+              _isLoading 
+                ? Center(
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text(
+                          'Saving changes...',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : CustomButton(
+                    text: 'Save Changes',
+                    onPressed: _canSave ? () => _saveChanges() : null,
+                  ),
             ],
           ),
         ),
