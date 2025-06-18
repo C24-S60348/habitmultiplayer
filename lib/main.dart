@@ -1261,7 +1261,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 32.0),
+                  padding: const EdgeInsets.only(top: 16.0,bottom: 16.0),
                   child: CustomButton(
                     text: 'Add New Habit',
                     onPressed: () async {
@@ -1302,6 +1302,7 @@ class _InsidePageState extends State<InsidePage>
   late WebIframeView _webIframeView;
   final bool _showNotes = false;
   int _habitState = 0; // 0: blank, 1: ticked, 2: X
+  bool _isLoadingHabitState = false; // Add loading state
 
   @override
   void initState() {
@@ -1350,6 +1351,11 @@ class _InsidePageState extends State<InsidePage>
   }
 
   Future<void> _cycleHabitState() async {
+    // Set loading state to true
+    setState(() {
+      _isLoadingHabitState = true;
+    });
+
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('loggedInUsername') ?? 'guest';
     final today = DateTime.now();
@@ -1409,8 +1415,10 @@ class _InsidePageState extends State<InsidePage>
       }),
     );
 
+    // Update state and set loading to false
     setState(() {
       _habitState = newState;
+      _isLoadingHabitState = false;
     });
   }
 
@@ -1511,9 +1519,18 @@ class _InsidePageState extends State<InsidePage>
             },
           ),
           IconButton(
-            icon: Icon(_habitIcon),
+            icon: _isLoadingHabitState 
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Icon(_habitIcon),
             tooltip: _habitTooltip,
-            onPressed: _cycleHabitState,
+            onPressed: _isLoadingHabitState ? null : _cycleHabitState,
           ),
         ],
       ),
