@@ -41,6 +41,7 @@ dependencies:
   flutter_html_iframe: ^3.0.0
   shimmer: ^3.0.0
   flutter_svg: ^2.0.10+1
+  google_fonts: ^6.1.0
 
 dev_dependencies:
   flutter_test:
@@ -71,6 +72,8 @@ flutter:
     - assets/fy/fireflylogowhite.svg
     - assets/fy/plane-departure.svg
     - assets/fy/FY_logo_only.svg
+    - assets/fy/banner.jpeg
+    - assets/fy/dubai-uae-featured.jpg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
