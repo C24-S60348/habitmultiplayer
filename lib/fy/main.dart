@@ -78,13 +78,13 @@ class _FlightSearchPageState extends State<FlightSearchPage> {
                   SizedBox(height: 10),
                   for (var name in _sideMenuNames)
                     Container(
-                      child: Text(name),
                       padding: EdgeInsets.all(10),
                       margin: EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
                       ),
+                      child: Text(name),
                     ),
                 ],
               ),
