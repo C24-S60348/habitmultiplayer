@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 // import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter/webview_flutter.dart' if (dart.library.io) 'package:webview_windows/webview_windows.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +8,7 @@ import 'dart:async'; // Import for Timer
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shimmer/shimmer.dart';
+
 
 //------------ Conditional imports
 import 'platform_mobile.dart' if (dart.library.html) 'platform_web.dart';
@@ -1877,6 +1878,18 @@ class WebIframeView extends StatelessWidget {
       final String viewId = 'iframe-${url.hashCode}';
       registerIframe(viewId, url);
       return HtmlElementView(viewType: viewId);
+    } else if (Theme.of(context).platform == TargetPlatform.windows) {
+      final controller = WebviewController();
+      return FutureBuilder(
+        future: controller.initialize(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            controller.loadUrl(url);
+            return Webview(controller);
+          }
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
     } else {
       final controller =
           WebViewController()
