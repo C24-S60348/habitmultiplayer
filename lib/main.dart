@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 // import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_flutter/webview_flutter.dart' if (dart.library.io) 'package:webview_windows/webview_windows.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
