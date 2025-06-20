@@ -28,9 +28,6 @@ jobs:
       - name: Build Windows Executable
         run: flutter build windows --release
 
-      - name: List Output Files
-        run: dir build\windows\x64\runner\Release /s
-
       - name: Upload Windows Executable
         uses: actions/upload-artifact@v4
         with:
