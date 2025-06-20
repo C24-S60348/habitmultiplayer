@@ -11,7 +11,10 @@ import 'package:shimmer/shimmer.dart';
 
 
 //------------ Conditional imports
-import 'platform_mobile.dart' if (dart.library.html) 'platform_web.dart';
+import 'platform_mobile.dart'
+  if (dart.library.html) 'platform_web.dart'
+  if (dart.library.io) 'platform_windows.dart';
+
 
 // Custom Button Widget
 class CustomButton extends StatelessWidget {
@@ -1873,28 +1876,28 @@ class WebIframeView extends StatelessWidget {
   const WebIframeView({super.key, required this.url});
 
   @override
-  Widget build(BuildContext context) {
+   Widget build(BuildContext context) {
     if (kIsWeb) {
       final String viewId = 'iframe-${url.hashCode}';
       registerIframe(viewId, url);
       return HtmlElementView(viewType: viewId);
     } else if (Theme.of(context).platform == TargetPlatform.windows) {
       final controller = WebviewController();
+
       return FutureBuilder(
         future: controller.initialize(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
             controller.loadUrl(url);
-            return Webview(controller);
+            return Webview(controller: controller);
           }
           return const Center(child: CircularProgressIndicator());
         },
       );
     } else {
-      final controller =
-          WebViewController()
-            ..setJavaScriptMode(JavaScriptMode.unrestricted)
-            ..loadRequest(Uri.parse(url));
+      final controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..loadRequest(Uri.parse(url));
       return WebViewWidget(controller: controller);
     }
   }
