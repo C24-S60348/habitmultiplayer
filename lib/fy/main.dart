@@ -4,11 +4,11 @@ import 'package:habit_multiplayer/fy/api.dart';
 import 'theme.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const FYPage());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class FYPage extends StatelessWidget {
+  const FYPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +73,7 @@ class _FlightSearchPageState extends State<FlightSearchPage> {
           : SingleChildScrollView(
               child: Column(
                 children: [
-                  SizedBox(height: 30),
+                  SizedBox(height: 50),
                   Text("Side Menu"),
                   SizedBox(height: 10),
                   for (var name in _sideMenuNames)
@@ -141,7 +141,7 @@ class _FlightSearchPageState extends State<FlightSearchPage> {
     return 
     Column(
       children: [
-        SizedBox(height: 5),
+        SizedBox(height: 20),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
