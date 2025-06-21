@@ -1,12 +1,21 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class FireflyApi {
-  static const String _baseUrl = 'https://appapidev.fireflyz.com.my/api/v5';
+  static String get _baseUrl {
+    if (kIsWeb) {
+      // bypass CORS
+      return 'http://afwanhaziq.vps.webdock.cloud:5000/api/fy';
+    } else {
+      return 'https://appapidev.fireflyz.com.my/api/v5';
+    }
+  }
 
-  /// Calls GET /Loading endpoint and returns the decoded JSON response.
   static Future<dynamic> getLoading() async {
-    final url = Uri.parse('$_baseUrl/Loading');
+    final url = kIsWeb
+        ? Uri.parse('$_baseUrl/Loading')
+        : Uri.parse('$_baseUrl/Loading');
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
