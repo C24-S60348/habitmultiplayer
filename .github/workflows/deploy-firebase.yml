@@ -1,4 +1,4 @@
-name: Deploy Flutter Web to Firebase Hosting
+name: Build Web and deploy to Firebase
 
 on:
   workflow_dispatch:
