@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:habit_multiplayer/fy/api.dart';
@@ -73,7 +74,7 @@ class _FlightSearchPageState extends State<FlightSearchPage> {
           : SingleChildScrollView(
               child: Column(
                 children: [
-                  SizedBox(height: 50),
+                  SizedBox(height: 30),
                   Text("Side Menu"),
                   SizedBox(height: 10),
                   for (var name in _sideMenuNames)
@@ -141,7 +142,7 @@ class _FlightSearchPageState extends State<FlightSearchPage> {
     return 
     Column(
       children: [
-        SizedBox(height: 20),
+        kIsWeb ? SizedBox(height: 10) : SizedBox(height: 30),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
