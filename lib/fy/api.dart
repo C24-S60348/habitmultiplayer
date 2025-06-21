@@ -4,11 +4,11 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 class FireflyApi {
   static String get _baseUrl {
-    final proxyUrl = "http://afwanhaziq.my:5000/proxy?url=";
+    final proxyUrl = "https://afwanhaziq.vps.webdock.cloud/proxy?url=";
     final apiUrl = "https://appapidev.fireflyz.com.my/api/v5";
     if (kIsWeb) {
       // bypass CORS
-      // return 'http://afwanhaziq.vps.webdock.cloud:5000/api/fy';
+      // return 'https://afwanhaziq.vps.webdock.cloud:5000/api/fy';
       return proxyUrl + apiUrl;
     } else {
       return apiUrl;
@@ -19,8 +19,6 @@ class FireflyApi {
     print('$_baseUrl/Loading');
     final url = Uri.parse('$_baseUrl/Loading');
     final response = await http.get(url);
-
-    print(response);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
