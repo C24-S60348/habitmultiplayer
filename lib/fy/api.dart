@@ -16,14 +16,28 @@ class FireflyApi {
   }
 
   static Future<dynamic> getLoading() async {
-    print('$_baseUrl/Loading');
-    final url = Uri.parse('$_baseUrl/Loading');
+    final fullUrl = '$_baseUrl/Loading';
+    print(fullUrl);
+    final url = Uri.parse(fullUrl);
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to load data: ${response.statusCode}');
+    }
+  }
+
+  static Future<dynamic> getBanner() async {
+    final fullUrl = '$_baseUrl/HomeBanner';
+    print(fullUrl);
+    final url = Uri.parse(fullUrl);
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load banner data: ${response.statusCode}');
     }
   }
 }
