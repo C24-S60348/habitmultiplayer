@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 
 class FireflyApi {
   static String get _baseUrl {
@@ -13,6 +14,40 @@ class FireflyApi {
     } else {
       return apiUrl;
     }
+  }
+
+  // Custom widget for loading images with proxy support
+  static Widget buildNetworkImage({
+    required String imageUrl,
+    BoxFit fit = BoxFit.cover,
+    Widget? errorWidget,
+    Widget? loadingWidget,
+  }) {
+    String fullUrl = kIsWeb 
+        ? "https://afwanhaziq.vps.webdock.cloud/proxy?url=$imageUrl"
+        : imageUrl;
+    
+    return Image.network(
+      fullUrl,
+      fit: fit,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return loadingWidget ?? Center(
+          child: CircularProgressIndicator(
+            value: loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded / 
+                  loadingProgress.expectedTotalBytes!
+                : null,
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return errorWidget ?? Image.asset(
+          'assets/fy/dubai-uae-featured.jpg',
+          fit: fit,
+        );
+      },
+    );
   }
 
   static Future<dynamic> getLoading() async {

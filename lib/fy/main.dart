@@ -196,15 +196,9 @@ class _FlightSearchPageState extends State<FlightSearchPage> {
         ),
         scrollDirection: Axis.horizontal,
         children: _bannerImages.map((imageUrl) {
-          return Image.network(
-            imageUrl,
-            fit: BoxFit.fill,
-            errorBuilder: (context, error, stackTrace) {
-              return Image.asset(
-                'assets/fy/dubai-uae-featured.jpg',
-                fit: BoxFit.fill,
-              );
-            },
+          return FireflyApi.buildNetworkImage(
+            imageUrl: imageUrl,
+            fit: BoxFit.cover,
           );
         }).toList(),
       ),
@@ -271,7 +265,10 @@ class _FlightSearchPageState extends State<FlightSearchPage> {
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: const Color.fromARGB(255, 231, 230, 230),
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
               ),
               child: Column(
                 children: [
