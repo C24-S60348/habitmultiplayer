@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 class FireflyApi {
   static String get _baseUrl {
     final proxyUrl = "https://afwanhaziq.vps.webdock.cloud/proxy?url=";
-    final apiUrl = "https://appapidev.fireflyz.com.my/api/v5";
+    final apiUrl = "https://appapidev.fireflyz.com.my/api/v5"; //or https://fyappapidev.me-tech.com.my/api/v5
     if (kIsWeb) {
       // bypass CORS
       // return 'https://afwanhaziq.vps.webdock.cloud:5000/api/fy';
