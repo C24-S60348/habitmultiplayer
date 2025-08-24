@@ -75,7 +75,7 @@ flutter:
     - assets/fy/FY_logo_only.svg
     - assets/fy/banner.jpeg
     - assets/fy/dubai-uae-featured.jpg
-
+    - assets/test/
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

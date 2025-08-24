@@ -4,10 +4,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:habit_multiplayer/fy/api.dart';
 import 'theme.dart';
 
-void main() {
-  runApp(const FYPage());
-}
-
 class FYPage extends StatelessWidget {
   const FYPage({super.key});
 
@@ -49,6 +45,8 @@ class _FlightSearchPageState extends State<FlightSearchPage> {
   // Banner data
   List<String> _bannerImages = [];
   bool _isBannerLoading = false;
+
+  double bannerHeight = 340.0;
 
   //load api start ================================
   @override
@@ -146,7 +144,6 @@ class _FlightSearchPageState extends State<FlightSearchPage> {
   }
 
   Widget _bannerSlider() {
-    var bannerHeight = 280.0;
     if (_isBannerLoading) {
       return SizedBox(
         width: double.infinity,
@@ -158,7 +155,6 @@ class _FlightSearchPageState extends State<FlightSearchPage> {
     }
 
     if (_bannerImages.isEmpty) {
-      // Fallback to default images if no banners loaded
       return SizedBox(
         width: double.infinity,
         height: bannerHeight,
@@ -258,7 +254,7 @@ class _FlightSearchPageState extends State<FlightSearchPage> {
       height: double.infinity,
       child: Column(
         children: [
-          SizedBox(height: 260),
+          SizedBox(height: bannerHeight - 20),
           Expanded(
             child: Container(
               width: double.infinity,

@@ -10,6 +10,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'fy/main.dart'; // Import FYPage
+import 'test/main.dart'; // Import TestPage
 
 
 //------------ Conditional imports
@@ -206,6 +207,13 @@ class _SplashScreenState extends State<SplashScreen> {
                         Navigator.of(context).push(MaterialPageRoute(builder: (context) => FYPage()));
                       },
                       child: Text('Fy Page'),
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).push(MaterialPageRoute(builder: (context) => TestPage()));
+                      },
+                      child: Text('Test Page'),
                     ),
                    ],
                    
