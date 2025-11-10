@@ -43,12 +43,18 @@ class _InsidePageState extends State<InsidePage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && mounted) {
       _loadHabitState(); // Reload habit state when app is resumed
     }
   }
 
   Future<void> _loadHabitState() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoadingHabitState = true;
+    });
+    
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('loggedInUsername') ?? 'guest';
     final token = prefs.getString('token') ?? '';
@@ -59,6 +65,9 @@ class _InsidePageState extends State<InsidePage>
       final url = Uri.parse('$apiBase/readhistory?habitid=${Uri.encodeQueryComponent(widget.habitId)}&token=${Uri.encodeQueryComponent(token)}');
       final response = await safeHttpGet(url);
       if (response == null) {
+        setState(() {
+          _isLoadingHabitState = false;
+        });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -77,15 +86,15 @@ class _InsidePageState extends State<InsidePage>
           final List<dynamic> hist = (data['data'] ?? []) as List<dynamic>;
           
           // Debug: Show what we received
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('📖 Loaded ${hist.length} history entries for habit ${widget.habitId}'),
-                duration: Duration(seconds: 2),
-                backgroundColor: Colors.blue,
-              ),
-            );
-          }
+          // if (mounted) {
+          //   ScaffoldMessenger.of(context).showSnackBar(
+          //     SnackBar(
+          //       content: Text('📖 Loaded ${hist.length} history entries for habit ${widget.habitId}'),
+          //       duration: Duration(seconds: 2),
+          //       backgroundColor: Colors.blue,
+          //     ),
+          //   );
+          // }
           
           // Find the history entry for today for this user
           Map<String, dynamic>? mineToday;
@@ -105,65 +114,75 @@ class _InsidePageState extends State<InsidePage>
               _habitState = int.tryParse(mineToday['historystatus']?.toString() ?? '0') ?? 0;
               
               // Debug: Show what state was found
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('✅ Found state: $_habitState for $username on $dateKey'),
-                    duration: Duration(seconds: 2),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
+              // if (mounted) {
+              //   ScaffoldMessenger.of(context).showSnackBar(
+              //     SnackBar(
+              //       content: Text('✅ Found state: $_habitState for $username on $dateKey'),
+              //       duration: Duration(seconds: 2),
+              //       backgroundColor: Colors.green,
+              //     ),
+              //   );
+              // }
             } else {
               _habitState = 0; // Default to unchecked if no entry found
               
               // Debug: Show that no entry was found
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('⚠️ No history found for $username on $dateKey (Looking for: username="$username", date="$dateKey")'),
-                    duration: Duration(seconds: 3),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-              }
+              // if (mounted) {
+              //   ScaffoldMessenger.of(context).showSnackBar(
+              //     SnackBar(
+              //       content: Text('⚠️ No history found for $username on $dateKey (Looking for: username="$username", date="$dateKey")'),
+              //       duration: Duration(seconds: 3),
+              //       backgroundColor: Colors.orange,
+              //     ),
+              //   );
+              // }
             }
+            _isLoadingHabitState = false;
           });
         } else {
           // API returned error status
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('❌ ReadHistory failed: ${data['message']?.toString() ?? 'Unknown error'}'),
-                duration: Duration(seconds: 3),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+          setState(() {
+            _isLoadingHabitState = false;
+          });
+          // if (mounted) {
+          //   ScaffoldMessenger.of(context).showSnackBar(
+          //     SnackBar(
+          //       content: Text('❌ ReadHistory failed: ${data['message']?.toString() ?? 'Unknown error'}'),
+          //       duration: Duration(seconds: 3),
+          //       backgroundColor: Colors.red,
+          //     ),
+          //   );
+          // }
         }
       } else {
         // HTTP error
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('❌ ReadHistory HTTP error: ${response.statusCode}'),
-              duration: Duration(seconds: 3),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        setState(() {
+          _isLoadingHabitState = false;
+        });
+        // if (mounted) {
+        //   ScaffoldMessenger.of(context).showSnackBar(
+        //     SnackBar(
+        //       content: Text('❌ ReadHistory HTTP error: ${response.statusCode}'),
+        //       duration: Duration(seconds: 3),
+        //       backgroundColor: Colors.red,
+        //     ),
+        //   );
+        // }
       }
     } catch (e) {
       print('Error loading habit state: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ ReadHistory exception: $e'),
-            duration: Duration(seconds: 3),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      setState(() {
+        _isLoadingHabitState = false;
+      });
+      // if (mounted) {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     SnackBar(
+      //       content: Text('❌ ReadHistory exception: $e'),
+      //       duration: Duration(seconds: 3),
+      //       backgroundColor: Colors.red,
+      //     ),
+      //   );
+      // }
     }
   }
 
@@ -198,15 +217,15 @@ class _InsidePageState extends State<InsidePage>
     });
     
     // Debug: Show what we're trying to save
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('💾 Saving: habitId=${widget.habitId}, date=$dateKey, status=$newState, username=$username'),
-          duration: Duration(seconds: 2),
-          backgroundColor: Colors.blue,
-        ),
-      );
-    }
+    // if (mounted) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     SnackBar(
+    //       content: Text('💾 Saving: habitId=${widget.habitId}, date=$dateKey, status=$newState, username=$username'),
+    //       duration: Duration(seconds: 2),
+    //       backgroundColor: Colors.blue,
+    //     ),
+    //   );
+    // }
     
     try {
       final url = Uri.parse(
@@ -235,58 +254,58 @@ class _InsidePageState extends State<InsidePage>
         final data = jsonDecode(response.body);
         if (data['status'] == 'ok') {
           // Successfully saved
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('✅ UpdateHistory success! Message: ${data['message']?.toString() ?? 'Saved'}'),
-                duration: Duration(seconds: 2),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
+          // if (mounted) {
+          //   ScaffoldMessenger.of(context).showSnackBar(
+          //     SnackBar(
+          //       content: Text('✅ UpdateHistory success! Message: ${data['message']?.toString() ?? 'Saved'}'),
+          //       duration: Duration(seconds: 2),
+          //       backgroundColor: Colors.green,
+          //     ),
+          //   );
+          // }
           
           // Now reload from server to ensure we have the correct state
           await _loadHabitState();
         } else {
           // API returned error
           final errorMsg = data['message']?.toString() ?? 'Failed to update habit state';
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('❌ UpdateHistory failed: $errorMsg'),
-                duration: Duration(seconds: 3),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+          // if (mounted) {
+          //   ScaffoldMessenger.of(context).showSnackBar(
+          //     SnackBar(
+          //       content: Text('❌ UpdateHistory failed: $errorMsg'),
+          //       duration: Duration(seconds: 3),
+          //       backgroundColor: Colors.red,
+          //     ),
+          //   );
+          // }
           // Reload to get the actual state from server
           await _loadHabitState();
         }
       } else {
         // HTTP error
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('❌ UpdateHistory HTTP error: ${response.statusCode}\nResponse: ${response.body}'),
-              duration: Duration(seconds: 4),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        // if (mounted) {
+        //   ScaffoldMessenger.of(context).showSnackBar(
+        //     SnackBar(
+        //       content: Text('❌ UpdateHistory HTTP error: ${response.statusCode}\nResponse: ${response.body}'),
+        //       duration: Duration(seconds: 4),
+        //       backgroundColor: Colors.red,
+        //     ),
+        //   );
+        // }
         // Reload to get actual state
         await _loadHabitState();
       }
     } catch (e) {
       print('Error updating habit state: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ UpdateHistory exception: $e'),
-            duration: Duration(seconds: 3),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      // if (mounted) {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     SnackBar(
+      //       content: Text('❌ UpdateHistory exception: $e'),
+      //       duration: Duration(seconds: 3),
+      //       backgroundColor: Colors.red,
+      //     ),
+      //   );
+      // }
       // On error, reload to get actual state from server
       await _loadHabitState();
     } finally {
@@ -385,12 +404,16 @@ class _InsidePageState extends State<InsidePage>
           IconButton(
             icon: Icon(Icons.history),
             tooltip: 'View Habit History',
-            onPressed: () {
-              Navigator.of(context).push(
+            onPressed: () async {
+              await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => HabitHistoryPage(habitId: widget.habitId, habitTitle: widget.title),
                 ),
               );
+              // Reload habit state when coming back from history page
+              if (mounted) {
+                _loadHabitState();
+              }
             },
           ),
           IconButton(
