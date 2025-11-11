@@ -53,21 +53,43 @@ class _NotesPageState extends State<NotesPage> {
 
     final url = Uri.parse('$apiBase/updatenote?habitid=${Uri.encodeQueryComponent(widget.habitId)}&notes=${Uri.encodeQueryComponent(newNote)}&token=${Uri.encodeQueryComponent(token)}');
     final resp = await safeHttpGet(url);
-    if (resp != null && resp.statusCode == 200 && (jsonDecode(resp.body)['status'] == 'ok')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Notes saved successfully!'),
-          duration: Duration(seconds: 2),
-          backgroundColor: Colors.green,
-        ),
-      );
-      setState(() {
-        notesChangedMap[username] = false;
-      });
+    
+    if (resp != null && resp.statusCode == 200) {
+      final data = safeJsonDecode(resp.body);
+      if (data != null && data['status'] == 'ok') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Notes saved successfully!'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() {
+          notesChangedMap[username] = false;
+        });
+      } else if (data != null && data['status'] == 'error') {
+        // Show error message from API
+        final errorMsg = data['message']?.toString() ?? 'Failed to save notes';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            duration: Duration(seconds: 3),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save notes'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save notes'),
+          content: Text('Network error. Please check your connection.'),
           duration: Duration(seconds: 2),
           backgroundColor: Colors.red,
         ),
@@ -98,15 +120,31 @@ class _NotesPageState extends State<NotesPage> {
         for (final habit in habits) {
           final h = habit as Map<String, dynamic>;
           if (h['id']?.toString() == widget.habitId) {
-            // Add owner
+            // Extract owner (username) from the habit data
             final owner = h['username']?.toString() ?? '';
             if (owner.isNotEmpty) {
               membersFromHabit.add(owner);
             }
-            // Add member
-            final member = h['member']?.toString() ?? '';
-            if (member.isNotEmpty) {
-              membersFromHabit.add(member);
+            
+            // Extract members from the members array
+            final membersData = h['members'];
+            if (membersData != null && membersData is List) {
+              for (final member in membersData) {
+                if (member is Map) {
+                  final memberName = member['member']?.toString() ?? '';
+                  if (memberName.isNotEmpty && memberName != owner) {
+                    if (!membersFromHabit.contains(memberName)) {
+                      membersFromHabit.add(memberName);
+                    }
+                  }
+                } else if (member is String) {
+                  if (member.isNotEmpty && member != owner) {
+                    if (!membersFromHabit.contains(member)) {
+                      membersFromHabit.add(member);
+                    }
+                  }
+                }
+              }
             }
             break;
           }
@@ -462,17 +500,26 @@ class _NotesPageState extends State<NotesPage> {
                             Divider(height: 1, thickness: 1),
                             // Selected member's notes below
                             Expanded(
-                              child: _selectedMember == null
-                                  ? Center(
-                                      child: Text(
-                                        'Select a member to view notes',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.grey[600],
+                              child: RefreshIndicator(
+                                onRefresh: _loadNotes,
+                                child: _selectedMember == null
+                                    ? SingleChildScrollView(
+                                        physics: AlwaysScrollableScrollPhysics(),
+                                        child: Container(
+                                          height: MediaQuery.of(context).size.height * 0.5,
+                                          child: Center(
+                                            child: Text(
+                                              'Select a member to view notes',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    )
-                                  : _buildNotesView(_selectedMember!, currentUsername),
+                                      )
+                                    : _buildNotesView(_selectedMember!, currentUsername),
+                              ),
                             ),
                           ],
                         ),

@@ -43,15 +43,31 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
         for (final habit in habits) {
           final h = habit as Map<String, dynamic>;
           if (h['id']?.toString() == widget.habitId) {
-            // Add owner
+            // Extract owner (username) from the habit data
             final owner = h['username']?.toString() ?? '';
             if (owner.isNotEmpty) {
               membersFromHabit.add(owner);
             }
-            // Add member
-            final member = h['member']?.toString() ?? '';
-            if (member.isNotEmpty) {
-              membersFromHabit.add(member);
+            
+            // Extract members from the members array
+            final membersData = h['members'];
+            if (membersData != null && membersData is List) {
+              for (final member in membersData) {
+                if (member is Map) {
+                  final memberName = member['member']?.toString() ?? '';
+                  if (memberName.isNotEmpty && memberName != owner) {
+                    if (!membersFromHabit.contains(memberName)) {
+                      membersFromHabit.add(memberName);
+                    }
+                  }
+                } else if (member is String) {
+                  if (member.isNotEmpty && member != owner) {
+                    if (!membersFromHabit.contains(member)) {
+                      membersFromHabit.add(member);
+                    }
+                  }
+                }
+              }
             }
             break;
           }
@@ -286,19 +302,30 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
             child: isLoading
                 ? Center(child: CircularProgressIndicator())
                 : allMembers.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No members yet',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                            fontStyle: FontStyle.italic,
+                    ? RefreshIndicator(
+                        onRefresh: _fetchHistory,
+                        child: SingleChildScrollView(
+                          physics: AlwaysScrollableScrollPhysics(),
+                          child: Container(
+                            height: MediaQuery.of(context).size.height * 0.5,
+                            child: Center(
+                              child: Text(
+                                'No members yet',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       )
-                    : SingleChildScrollView(
-                        child: Column(
-                          children: allMembers.map<Widget>((member) {
+                    : RefreshIndicator(
+                        onRefresh: _fetchHistory,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: allMembers.map<Widget>((member) {
                             final isCurrentUser = member == currentUsername;
                             return Column(
                               children: [
@@ -403,6 +430,7 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
                               ],
                             );
                           }).toList(),
+                          ),
                         ),
                       ),
           ),

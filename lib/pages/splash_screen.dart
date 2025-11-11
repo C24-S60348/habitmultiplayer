@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../utils/api_helpers.dart';
 import '../widgets/custom_button.dart';
 import 'login_page.dart';
@@ -18,15 +19,30 @@ class _SplashScreenState extends State<SplashScreen> {
   String loggedInUser = '';
   bool _isLoading = true;
   bool _isCheckingInternet = false;
+  String _appVersion = '';
 
   @override
   void initState() {
     super.initState();
     _getLoggedInUser();
+    _loadAppVersion();
     // Check internet after first frame to ensure context is available
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInternetAndPrompt();
     });
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      setState(() {
+        _appVersion = 'v${packageInfo.version}';
+      });
+    } catch (e) {
+      setState(() {
+        _appVersion = 'v1.0.0'; // Fallback version
+      });
+    }
   }
 
   // Method to fetch logged-in user from SharedPreferences
@@ -117,7 +133,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     color: Theme.of(context).primaryColor,
                     shadows: [
                       Shadow(
-                        blurRadius: 8,
+                        // blurRadius: 8,
                         color: Colors.blueGrey.withOpacity(0.3),
                         offset: Offset(2, 2),
                       ),
@@ -206,6 +222,18 @@ class _SplashScreenState extends State<SplashScreen> {
                       },
                     ),
                   ),
+                SizedBox(height: 32),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: Text(
+                    _appVersion.isEmpty ? 'Loading...' : _appVersion,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

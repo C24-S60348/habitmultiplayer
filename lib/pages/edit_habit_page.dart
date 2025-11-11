@@ -269,89 +269,98 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
                     tooltip: 'Add Member',
                     color: Theme.of(context).primaryColor,
                   ),
-                  IconButton(
-                    icon: Icon(Icons.refresh),
-                    onPressed: _loadMembers,
-                    tooltip: 'Refresh Members',
-                  ),
+                  // IconButton(
+                  //   icon: Icon(Icons.refresh),
+                  //   onPressed: _loadMembers,
+                  //   tooltip: 'Refresh Members',
+                  // ),
                 ],
               ),
             ],
           ),
         ),
         Expanded(
-          child: _members.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
-                      SizedBox(height: 16),
-                      Text(
-                        'No members yet',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: _showAddMemberDialog,
-                        icon: Icon(Icons.add),
-                        label: Text('Add Member'),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: _members.length,
-                  itemBuilder: (context, index) {
-                    final member = _members[index];
-                    final isOwner = member == _owner;
-                    return Card(
-                      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      color: isOwner ? Colors.blue[50] : null,
-                      child: ListTile(
-                        leading: Icon(
-                          isOwner ? Icons.person : Icons.person_outline,
-                          color: isOwner ? Colors.blue : Theme.of(context).primaryColor,
-                        ),
-                        title: Row(
+          child: RefreshIndicator(
+            onRefresh: _loadMembers,
+            child: _members.isEmpty
+                ? SingleChildScrollView(
+                    physics: AlwaysScrollableScrollPhysics(),
+                    child: Container(
+                      height: MediaQuery.of(context).size.height * 0.5,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
+                            Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
+                            SizedBox(height: 16),
                             Text(
-                              member,
+                              'No members yet',
                               style: TextStyle(
-                                fontWeight: isOwner ? FontWeight.bold : FontWeight.w500,
-                                color: isOwner ? Colors.blue[900] : null,
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                                fontStyle: FontStyle.italic,
                               ),
                             ),
-                            if (isOwner)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8.0),
-                                child: Chip(
-                                  label: Text(
-                                    'Owner',
-                                    style: TextStyle(fontSize: 10, color: Colors.white),
-                                  ),
-                                  backgroundColor: Colors.blue,
-                                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                ),
-                              ),
+                            SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: _showAddMemberDialog,
+                              icon: Icon(Icons.add),
+                              label: Text('Add Member'),
+                            ),
                           ],
                         ),
-                        trailing: isOwner
-                            ? Icon(Icons.star, color: Colors.amber, size: 20)
-                            : IconButton(
-                                icon: Icon(Icons.close, color: Colors.red),
-                                onPressed: () => _removeMember(member),
-                                tooltip: 'Remove Member',
-                              ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _members.length,
+                    itemBuilder: (context, index) {
+                      final member = _members[index];
+                      final isOwner = member == _owner;
+                      return Card(
+                        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        color: isOwner ? Colors.blue[50] : null,
+                        child: ListTile(
+                          leading: Icon(
+                            isOwner ? Icons.person : Icons.person_outline,
+                            color: isOwner ? Colors.blue : Theme.of(context).primaryColor,
+                          ),
+                          title: Row(
+                            children: [
+                              Text(
+                                member,
+                                style: TextStyle(
+                                  fontWeight: isOwner ? FontWeight.bold : FontWeight.w500,
+                                  color: isOwner ? Colors.blue[900] : null,
+                                ),
+                              ),
+                              if (isOwner)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8.0),
+                                  child: Chip(
+                                    label: Text(
+                                      'Owner',
+                                      style: TextStyle(fontSize: 10, color: Colors.white),
+                                    ),
+                                    backgroundColor: Colors.blue,
+                                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: isOwner
+                              ? Icon(Icons.star, color: Colors.amber, size: 20)
+                              : IconButton(
+                                  icon: Icon(Icons.close, color: Colors.red),
+                                  onPressed: () => _removeMember(member),
+                                  tooltip: 'Remove Member',
+                                ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
         ),
       ],
     );

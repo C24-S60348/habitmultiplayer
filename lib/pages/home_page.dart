@@ -117,17 +117,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && !_isLoadingHabits) {
-      // Add small delay to prevent rapid-fire calls
-      Future.delayed(Duration(milliseconds: 300), () {
-        if (mounted && !_isLoadingHabits) {
-          _loadHabits(); // Reload habits when app is resumed
-        }
-      });
-    }
-  }
+  // @override
+  // void didChangeAppLifecycleState(AppLifecycleState state) {
+  //   if (state == AppLifecycleState.resumed && !_isLoadingHabits) {
+  //     // Add small delay to prevent rapid-fire calls
+  //     Future.delayed(Duration(milliseconds: 300), () {
+  //       if (mounted && !_isLoadingHabits) {
+  //         _loadHabits(); // Reload habits when app is resumed
+  //       }
+  //     });
+  //   }
+  // }
 
   Future<void> _onRefresh() async {
     await _loadHabits();
@@ -182,63 +182,123 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _showAddHabitDialog(BuildContext context) async {
+    bool _isAddingHabit = false;
+    
     return showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Add New Habit'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _habitTitleController,
-                decoration: InputDecoration(
-                  labelText: 'Habit Title',
-                  hintText: 'e.g., Read Books',
-                ),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Add New Habit'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _habitTitleController,
+                    decoration: InputDecoration(
+                      labelText: 'Habit Title',
+                      hintText: 'e.g., Read Books',
+                    ),
+                    enabled: !_isAddingHabit,
+                  ),
+                  SizedBox(height: 16),
+                  TextField(
+                    controller: _habitLinkController,
+                    decoration: InputDecoration(
+                      labelText: 'Habit Link (Optional)',
+                      hintText: 'e.g., https://example.com',
+                      errorText: _habitLinkController.text.isNotEmpty && !DialogUtils.isValidUrl(_habitLinkController.text)
+                          ? 'Please enter a valid URL (e.g., https://example.com)'
+                          : null,
+                    ),
+                    onChanged: (value) {
+                      setDialogState(() {}); // Trigger rebuild to show/hide error
+                    },
+                    enabled: !_isAddingHabit,
+                  ),
+                ],
               ),
-              SizedBox(height: 16),
-              TextField(
-                controller: _habitLinkController,
-                decoration: InputDecoration(
-                  labelText: 'Habit Link (Optional)',
-                  hintText: 'e.g., https://example.com',
-                  errorText: _habitLinkController.text.isNotEmpty && !DialogUtils.isValidUrl(_habitLinkController.text)
-                      ? 'Please enter a valid URL (e.g., https://example.com)'
-                      : null,
-                ),
-                onChanged: (value) {
-                  setState(() {}); // Trigger rebuild to show/hide error
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
-            ),
-            CustomButton(
-              text: 'Add Habit',
-              onPressed: () async {
-                if (_habitTitleController.text.isNotEmpty) {
-                  final success = await _addNewHabit(
-                    _habitTitleController.text,
-                    _habitLinkController.text,
-                  );
-                  // Only close dialog and clear fields if habit was successfully added
-                  if (success) {
+              actions: [
+                TextButton(
+                  onPressed: _isAddingHabit ? null : () {
                     Navigator.of(context).pop();
-                    _habitTitleController.clear();
-                    _habitLinkController.clear();
-                  }
-                  // If not successful, keep dialog open so user can fix the error
-                }
-              },
-            ),
-          ],
+                  },
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: _isAddingHabit ? null : () async {
+                    if (_habitTitleController.text.isNotEmpty) {
+                      setDialogState(() {
+                        _isAddingHabit = true;
+                      });
+                      
+                      final success = await _addNewHabit(
+                        _habitTitleController.text,
+                        _habitLinkController.text,
+                      );
+                      
+                      setDialogState(() {
+                        _isAddingHabit = false;
+                      });
+                      
+                      // Only close dialog and clear fields if habit was successfully added
+                      if (success) {
+                        Navigator.of(context).pop();
+                        _habitTitleController.clear();
+                        _habitLinkController.clear();
+                      }
+                      // If not successful, keep dialog open so user can fix the error
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                    backgroundColor: Theme.of(context).primaryColor,
+                    shadowColor: Colors.black.withOpacity(0.5),
+                    elevation: 10,
+                  ),
+                  child: _isAddingHabit
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Adding...',
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Poppins',
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                          ],
+                        )
+                      : Text(
+                          'Add Habit',
+                          style: TextStyle(
+                            fontSize: 20,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins',
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -556,18 +616,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Complete All Habits',
+          'My Habits',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: const Color.fromARGB(255, 255, 201, 184).withOpacity(0.7),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: _loadHabits,
-            tooltip: 'Refresh Habits',
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: Icon(Icons.refresh),
+        //     onPressed: _loadHabits,
+        //     tooltip: 'Refresh Habits',
+        //   ),
+        // ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -665,7 +725,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 16.0,bottom: 16.0),
+                  padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
                   child: CustomButton(
                     text: 'Add New Habit',
                     onPressed: () async {
