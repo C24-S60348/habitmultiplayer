@@ -62,8 +62,12 @@ class _InsidePageState extends State<InsidePage>
     final dateKey = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
 
     try {
-      final url = Uri.parse('$apiBase/readhistory?habitid=${Uri.encodeQueryComponent(widget.habitId)}&token=${Uri.encodeQueryComponent(token)}');
-      final response = await safeHttpGet(url);
+      final url = Uri.parse('$apiBase/readhistory');
+      final body = {
+        'habitid': widget.habitId,
+        'token': token,
+      };
+      final response = await safeHttpPost(url, body: body);
       if (response == null) {
         setState(() {
           _isLoadingHabitState = false;
@@ -228,10 +232,14 @@ class _InsidePageState extends State<InsidePage>
     // }
     
     try {
-      final url = Uri.parse(
-        '$apiBase/updatehistory?habitid=${Uri.encodeQueryComponent(widget.habitId)}&historydate=$dateKey&historystatus=$newState&token=${Uri.encodeQueryComponent(token)}',
-      );
-      final response = await safeHttpGet(url);
+      final url = Uri.parse('$apiBase/updatehistory');
+      final body = {
+        'habitid': widget.habitId,
+        'historydate': dateKey,
+        'historystatus': newState.toString(),
+        'token': token,
+      };
+      final response = await safeHttpPost(url, body: body);
       if (response == null) {
         // Revert on network error
         setState(() {

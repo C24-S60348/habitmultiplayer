@@ -66,8 +66,9 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
-    final url = Uri.parse('$apiBase/readhabit?token=${Uri.encodeQueryComponent(token)}');
-    final response = await safeHttpGet(url);
+    final url = Uri.parse('$apiBase/readhabit');
+    final body = {'token': token};
+    final response = await safeHttpPost(url, body: body);
 
     if (response != null && response.statusCode == 200) {
       final data = safeJsonDecode(response.body);
@@ -407,10 +408,13 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
   Future<void> _addMember(String member) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
-    final url = Uri.parse(
-      '$apiBase/addmember?habitid=${Uri.encodeQueryComponent(widget.habitId)}&member=${Uri.encodeQueryComponent(member)}&token=${Uri.encodeQueryComponent(token)}',
-    );
-    final response = await safeHttpGet(url);
+    final url = Uri.parse('$apiBase/addmember');
+    final body = {
+      'habitid': widget.habitId,
+      'member': member,
+      'token': token,
+    };
+    final response = await safeHttpPost(url, body: body);
 
     if (response != null && response.statusCode == 200) {
       final data = safeJsonDecode(response.body);
@@ -463,10 +467,13 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
-    final url = Uri.parse(
-      '$apiBase/deletemember?habitid=${Uri.encodeQueryComponent(widget.habitId)}&member=${Uri.encodeQueryComponent(member)}&token=${Uri.encodeQueryComponent(token)}',
-    );
-    final response = await safeHttpGet(url);
+    final url = Uri.parse('$apiBase/deletemember');
+    final body = {
+      'habitid': widget.habitId,
+      'member': member,
+      'token': token,
+    };
+    final response = await safeHttpPost(url, body: body);
 
     if (response != null && response.statusCode == 200) {
       final data = safeJsonDecode(response.body);
@@ -543,10 +550,14 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
     final token = prefs.getString('token') ?? '';
 
     // Update title
-    final updateNameUrl = Uri.parse(
-      '$apiBase/updatehabit?id=${Uri.encodeQueryComponent(widget.habitId)}&newname=name&newdata=${Uri.encodeQueryComponent(_titleController.text)}&token=${Uri.encodeQueryComponent(token)}',
-    );
-    final updateNameResp = await safeHttpGet(updateNameUrl);
+    final updateNameUrl = Uri.parse('$apiBase/updatehabit');
+    final updateNameBody = {
+      'id': widget.habitId,
+      'newname': 'name',
+      'newdata': _titleController.text,
+      'token': token,
+    };
+    final updateNameResp = await safeHttpPost(updateNameUrl, body: updateNameBody);
     if (updateNameResp == null || updateNameResp.statusCode != 200) {
       final errorMsg = updateNameResp != null
           ? (jsonDecode(updateNameResp.body)['message']?.toString() ?? 'Failed to update title')
@@ -573,10 +584,14 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
 
     // Update URL if not empty
     if (_linkController.text.isNotEmpty) {
-      final updateUrlUrl = Uri.parse(
-        '$apiBase/updatehabit?id=${Uri.encodeQueryComponent(widget.habitId)}&newname=url&newdata=${Uri.encodeQueryComponent(_linkController.text)}&token=${Uri.encodeQueryComponent(token)}',
-      );
-      final updateUrlResp = await safeHttpGet(updateUrlUrl);
+      final updateUrlUrl = Uri.parse('$apiBase/updatehabit');
+      final updateUrlBody = {
+        'id': widget.habitId,
+        'newname': 'url',
+        'newdata': _linkController.text,
+        'token': token,
+      };
+      final updateUrlResp = await safeHttpPost(updateUrlUrl, body: updateUrlBody);
       if (updateUrlResp == null || updateUrlResp.statusCode != 200) {
         final errorMsg = updateUrlResp != null
             ? (jsonDecode(updateUrlResp.body)['message']?.toString() ?? 'Failed to update link')
@@ -641,8 +656,12 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
-    final url = Uri.parse('$apiBase/deletehabit?id=${Uri.encodeQueryComponent(widget.habitId)}&token=$token');
-    await safeHttpGet(url);
+    final url = Uri.parse('$apiBase/deletehabit');
+    final body = {
+      'id': widget.habitId,
+      'token': token,
+    };
+    await safeHttpPost(url, body: body);
 
     // Pop back to previous page with delete flag
     Navigator.of(context).pop({'deleted': true});

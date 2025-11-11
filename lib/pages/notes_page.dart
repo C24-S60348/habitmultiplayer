@@ -51,8 +51,14 @@ class _NotesPageState extends State<NotesPage> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
 
-    final url = Uri.parse('$apiBase/updatenote?habitid=${Uri.encodeQueryComponent(widget.habitId)}&notes=${Uri.encodeQueryComponent(newNote)}&token=${Uri.encodeQueryComponent(token)}');
-    final resp = await safeHttpGet(url);
+    // Use POST with JSON body instead of GET to avoid URL length limitations
+    final url = Uri.parse('$apiBase/updatenote');
+    final body = {
+      'habitid': widget.habitId,
+      'notes': newNote,
+      'token': token,
+    };
+    final resp = await safeHttpPost(url, body: body);
     
     if (resp != null && resp.statusCode == 200) {
       final data = safeJsonDecode(resp.body);
@@ -109,8 +115,9 @@ class _NotesPageState extends State<NotesPage> {
     final token = prefs.getString('token') ?? '';
 
     // First, get the habit data to find owner and member
-    final habitUrl = Uri.parse('$apiBase/readhabit?token=${Uri.encodeQueryComponent(token)}');
-    final habitResponse = await safeHttpGet(habitUrl);
+    final habitUrl = Uri.parse('$apiBase/readhabit');
+    final habitBody = {'token': token};
+    final habitResponse = await safeHttpPost(habitUrl, body: habitBody);
     
     Set<String> membersFromHabit = {};
     if (habitResponse != null && habitResponse.statusCode == 200) {
@@ -153,8 +160,12 @@ class _NotesPageState extends State<NotesPage> {
     }
 
     // Then get all notes
-    final url = Uri.parse('$apiBase/readnote?habitid=${Uri.encodeQueryComponent(widget.habitId)}&token=${Uri.encodeQueryComponent(token)}');
-    final response = await safeHttpGet(url);
+    final url = Uri.parse('$apiBase/readnote');
+    final body = {
+      'habitid': widget.habitId,
+      'token': token,
+    };
+    final response = await safeHttpPost(url, body: body);
 
     final Map<String, String> notes = {};
     final Set<String> membersFromNotes = {};

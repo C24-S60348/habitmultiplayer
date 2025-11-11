@@ -321,10 +321,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
 
-    final createUrl = Uri.parse(
-      '$apiBase/createhabit?name=${Uri.encodeQueryComponent(title)}&url=${Uri.encodeQueryComponent(link.isEmpty ? 'https://example.com' : link)}&token=$token',
-    );
-    final createResp = await safeHttpGet(createUrl);
+    final createUrl = Uri.parse('$apiBase/createhabit');
+    final body = {
+      'name': title,
+      'url': link.isEmpty ? 'https://example.com' : link,
+      'token': token,
+    };
+    final createResp = await safeHttpPost(createUrl, body: body);
     if (createResp == null || createResp.statusCode != 200) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to create habit'), backgroundColor: Colors.red),
@@ -393,10 +396,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final token = prefs.getString('token') ?? '';
 
     // Update title (name)
-    final updateNameUrl = Uri.parse(
-      '$apiBase/updatehabit?id=${Uri.encodeQueryComponent(habitId)}&newname=name&newdata=${Uri.encodeQueryComponent(newTitle)}&token=${Uri.encodeQueryComponent(token)}',
-    );
-    final updateNameResp = await safeHttpGet(updateNameUrl);
+    final updateNameUrl = Uri.parse('$apiBase/updatehabit');
+    final updateNameBody = {
+      'id': habitId,
+      'newname': 'name',
+      'newdata': newTitle,
+      'token': token,
+    };
+    final updateNameResp = await safeHttpPost(updateNameUrl, body: updateNameBody);
     if (updateNameResp == null || updateNameResp.statusCode != 200) {
       final errorMsg = updateNameResp != null 
           ? (jsonDecode(updateNameResp.body)['message']?.toString() ?? 'Failed to update title')
@@ -417,10 +424,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     // Update link (url) if provided, else keep old (server disallows empty)
     if (newLink.isNotEmpty) {
-      final updateUrlUrl = Uri.parse(
-        '$apiBase/updatehabit?id=${Uri.encodeQueryComponent(habitId)}&newname=url&newdata=${Uri.encodeQueryComponent(newLink)}&token=${Uri.encodeQueryComponent(token)}',
-      );
-      final updateUrlResp = await safeHttpGet(updateUrlUrl);
+      final updateUrlUrl = Uri.parse('$apiBase/updatehabit');
+      final updateUrlBody = {
+        'id': habitId,
+        'newname': 'url',
+        'newdata': newLink,
+        'token': token,
+      };
+      final updateUrlResp = await safeHttpPost(updateUrlUrl, body: updateUrlBody);
       if (updateUrlResp == null || updateUrlResp.statusCode != 200) {
         final errorMsg = updateUrlResp != null
             ? (jsonDecode(updateUrlResp.body)['message']?.toString() ?? 'Failed to update link')
@@ -526,10 +537,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
-    final url = Uri.parse('$apiBase/readhabit?token=$token');
+    final url = Uri.parse('$apiBase/readhabit');
+    final body = {'token': token};
 
     try {
-      final response = await safeHttpGet(url);
+      final response = await safeHttpPost(url, body: body);
 
       if (response != null && response.statusCode == 200) {
         // Yield before parsing JSON

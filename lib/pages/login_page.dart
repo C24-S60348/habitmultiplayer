@@ -38,10 +38,15 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    final url = Uri.parse('$apiBase/login?username=$username&password=$password&keeptoken=yes');
+    final url = Uri.parse('$apiBase/login');
+    final body = {
+      'username': username,
+      'password': password,
+      'keeptoken': 'yes',
+    };
     http.Response? response;
     try {
-      response = await http.get(url).timeout(Duration(seconds: 10));
+      response = await safeHttpPost(url, body: body);
     } catch (e) {
       setState(() {
         _response = 'Network error. Please check your internet connection.';

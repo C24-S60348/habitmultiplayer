@@ -32,8 +32,9 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
     final token = prefs.getString('token') ?? '';
     
     // First, get the habit data to find owner and member
-    final habitUrl = Uri.parse('$apiBase/readhabit?token=${Uri.encodeQueryComponent(token)}');
-    final habitResponse = await safeHttpGet(habitUrl);
+    final habitUrl = Uri.parse('$apiBase/readhabit');
+    final habitBody = {'token': token};
+    final habitResponse = await safeHttpPost(habitUrl, body: habitBody);
     
     Set<String> membersFromHabit = {};
     if (habitResponse != null && habitResponse.statusCode == 200) {
@@ -76,8 +77,12 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
     }
     
     // Then get history
-    final url = Uri.parse('$apiBase/readhistory?habitid=${Uri.encodeQueryComponent(widget.habitId)}&token=${Uri.encodeQueryComponent(token)}');
-    final response = await safeHttpGet(url);
+    final url = Uri.parse('$apiBase/readhistory');
+    final body = {
+      'habitid': widget.habitId,
+      'token': token,
+    };
+    final response = await safeHttpPost(url, body: body);
     if (response != null && response.statusCode == 200) {
       final data = jsonDecode(response.body);
       if (data['status'] == 'ok') {
@@ -164,10 +169,14 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
     });
 
     try {
-      final url = Uri.parse(
-        '$apiBase/updatehistory?habitid=${Uri.encodeQueryComponent(widget.habitId)}&historydate=$dateKey&historystatus=$newState&token=${Uri.encodeQueryComponent(token)}',
-      );
-      final response = await safeHttpGet(url);
+      final url = Uri.parse('$apiBase/updatehistory');
+      final body = {
+        'habitid': widget.habitId,
+        'historydate': dateKey,
+        'historystatus': newState.toString(),
+        'token': token,
+      };
+      final response = await safeHttpPost(url, body: body);
       if (response == null) {
         // Revert on network error
         final index = habitMap[dateKey]!.indexWhere((e) => e['username'] == username);

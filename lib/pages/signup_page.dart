@@ -35,12 +35,16 @@ class _SignupPageState extends State<SignupPage> {
     }
 
     // Register new user on the new API (requires passwordadmin)
-    final url = Uri.parse(
-      '$apiBase/register?username=$username&password=$password&passwordrepeat=$password&passwordadmin=afwan',
-    );
+    final url = Uri.parse('$apiBase/register');
+    final body = {
+      'username': username,
+      'password': password,
+      'passwordrepeat': password,
+      'passwordadmin': 'afwan',
+    };
     http.Response? signupResponse;
     try {
-      signupResponse = await http.get(url).timeout(Duration(seconds: 10));
+      signupResponse = await safeHttpPost(url, body: body);
     } catch (e) {
       setState(() {
         _response = 'Network error. Please check your internet connection.';

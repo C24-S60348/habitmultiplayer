@@ -17,7 +17,16 @@ def getpostget(name="habitid"):
     else:
         return af_requestget(name, "")
     
+
+def af_requestget(code="ikan", default=""):
+    return request.args.get(code, default)
     
+def af_requestpost(code="ikan", default=""):
+    return request.form.get(code, default)
+
+def af_requestpostfromjson(code="ikan", default=""):
+    requestpost = request.json
+    return requestpost.get(code, default)    
 # def createhabit(data={}):
     
 #     data['csv'] = habitcsv

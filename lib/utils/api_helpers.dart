@@ -28,6 +28,26 @@ Future<http.Response?> safeHttpGet(Uri url, {Duration timeout = const Duration(s
   }
 }
 
+// Helper function for safe HTTP POST requests with JSON body, timeout and error handling
+Future<http.Response?> safeHttpPost(
+  Uri url, {
+  Map<String, dynamic>? body,
+  Duration timeout = const Duration(seconds: 10),
+}) async {
+  try {
+    // Yield control to UI thread before making request
+    await Future.delayed(Duration.zero);
+    final headers = {'Content-Type': 'application/json'};
+    final jsonBody = body != null ? jsonEncode(body) : null;
+    return await http
+        .post(url, headers: headers, body: jsonBody)
+        .timeout(timeout);
+  } catch (e) {
+    print('Network error: $e');
+    return null;
+  }
+}
+
 // Helper function for safe JSON decoding that yields control
 dynamic safeJsonDecode(String source) {
   try {
