@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../utils/api_helpers.dart';
@@ -24,6 +25,7 @@ class _NotesPageState extends State<NotesPage> {
   Set<String> allMembersSet = {}; // Store all members
   Map<String, TextEditingController> controllersMap = {}; // Controllers for each member
   Map<String, bool> notesChangedMap = {}; // Track changes for each member
+  Map<String, String> memberNamesMap = {}; // Map from username to display name
   bool _isLoading = true;
   String? _savingUsername; // Track which user's notes are being saved
   String? _selectedMember; // Currently selected member to view/edit
@@ -138,10 +140,10 @@ class _NotesPageState extends State<NotesPage> {
             if (membersData != null && membersData is List) {
               for (final member in membersData) {
                 if (member is Map) {
-                  final memberName = member['member']?.toString() ?? '';
-                  if (memberName.isNotEmpty && memberName != owner) {
-                    if (!membersFromHabit.contains(memberName)) {
-                      membersFromHabit.add(memberName);
+                  final memberUsername = member['member']?.toString() ?? '';
+                  if (memberUsername.isNotEmpty && memberUsername != owner) {
+                    if (!membersFromHabit.contains(memberUsername)) {
+                      membersFromHabit.add(memberUsername);
                     }
                   }
                 } else if (member is String) {
@@ -189,6 +191,69 @@ class _NotesPageState extends State<NotesPage> {
     // Combine members from habit and notes
     final allMembers = {...membersFromHabit, ...membersFromNotes};
     
+    // Fetch member names from /readprofile API
+    Map<String, String> memberNamesMap = {};
+    print('=== FETCHING MEMBER NAMES ===');
+    print('Total members: ${allMembers.length}');
+    print('Members list: $allMembers');
+    print('Token is empty: ${token.isEmpty}');
+    debugPrint('=== FETCHING MEMBER NAMES ===');
+    debugPrint('Total members: ${allMembers.length}');
+    debugPrint('Members list: $allMembers');
+    debugPrint('Token is empty: ${token.isEmpty}');
+    
+    // Allow API call even for guest (readprofile now supports guest)
+    if (allMembers.isNotEmpty) {
+      try {
+        final profileUrl = Uri.parse('$apiBase/readprofile');
+        final usernamesList = allMembers.join(',');
+        print('Calling /readprofile API with usernames: $usernamesList');
+        debugPrint('Calling /readprofile API with usernames: $usernamesList');
+        final profileBody = {
+          'token': token,
+          'usernames': usernamesList,
+        };
+        final profileResponse = await safeHttpPost(profileUrl, body: profileBody);
+        print('Profile API response status: ${profileResponse?.statusCode}');
+        debugPrint('Profile API response status: ${profileResponse?.statusCode}');
+        
+        if (profileResponse != null && profileResponse.statusCode == 200) {
+          final profileData = jsonDecode(profileResponse.body);
+          print('Profile API response: ${profileResponse.body}');
+          debugPrint('Profile API response: ${profileResponse.body}');
+          if (profileData['status'] == 'ok' && profileData['data'] != null) {
+            final List<dynamic> profiles = profileData['data'] as List<dynamic>;
+            print('Found ${profiles.length} profiles');
+            debugPrint('Found ${profiles.length} profiles');
+            for (final profile in profiles) {
+              final p = profile as Map<String, dynamic>;
+              final username = p['username']?.toString() ?? '';
+              final name = p['name']?.toString() ?? '';
+              print('Processing profile - username: $username, name: "$name"');
+              debugPrint('Processing profile - username: $username, name: "$name"');
+              if (username.isNotEmpty) {
+                // Store name (even if empty, will fallback to username in display)
+                memberNamesMap[username] = name;
+                print('Stored name for $username: "${name.isEmpty ? "(empty)" : name}"');
+                debugPrint('Profile for $username: name="${name.isEmpty ? "(empty)" : name}"');
+              }
+            }
+            print('Final memberNamesMap: $memberNamesMap');
+            debugPrint('Final memberNamesMap: $memberNamesMap');
+          } else {
+            print('Profile API error: ${profileData['status']} - ${profileData['message']}');
+            debugPrint('Profile API error: ${profileData['status']} - ${profileData['message']}');
+          }
+        } else {
+          print('Profile API call failed: ${profileResponse?.statusCode}');
+          debugPrint('Profile API call failed: ${profileResponse?.statusCode}');
+        }
+      } catch (e) {
+        // If API call fails, continue without names
+        debugPrint('Error fetching member names: $e');
+      }
+    }
+    
     // Create controllers for all members
     final Map<String, TextEditingController> controllers = {};
     final Map<String, bool> changedMap = {};
@@ -206,9 +271,16 @@ class _NotesPageState extends State<NotesPage> {
       allMembersSet = allMembers;
       controllersMap = controllers;
       notesChangedMap = changedMap;
+      memberNamesMap = memberNamesMap; // Store names from readprofile API
       _selectedMember = selectedMember;
       _isLoading = false;
     });
+  }
+  
+  String _getDisplayName(String username) {
+    // Return name if available and not empty, otherwise return username
+    final name = memberNamesMap[username];
+    return (name != null && name.isNotEmpty) ? name : username;
   }
   
   List<String> _getAllMembers() {
@@ -244,12 +316,28 @@ class _NotesPageState extends State<NotesPage> {
               children: [
                 Icon(Icons.person, color: Theme.of(context).primaryColor),
                 SizedBox(width: 8),
-                Text(
-                  member,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
-                    color: isCurrentUser ? Colors.blue : Colors.black87,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _getDisplayName(member),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
+                          color: isCurrentUser ? Colors.blue : Colors.black87,
+                        ),
+                      ),
+                      if (_getDisplayName(member) != member)
+                        Text(
+                          member,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 if (isCurrentUser && hasChanges)
@@ -459,6 +547,7 @@ class _NotesPageState extends State<NotesPage> {
                                       final isCurrentUser = member == currentUsername;
                                       final isSelected = member == _selectedMember;
                                       final hasChanges = notesChangedMap[member] == true && isCurrentUser;
+                                      final displayName = _getDisplayName(member);
                                       
                                       return GestureDetector(
                                         onTap: () {
@@ -470,14 +559,29 @@ class _NotesPageState extends State<NotesPage> {
                                           label: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Text(
-                                                member,
-                                                style: TextStyle(
-                                                  fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
-                                                  color: isSelected 
-                                                      ? (isCurrentUser ? Colors.blue : Colors.black87)
-                                                      : (isCurrentUser ? Colors.blue[300] : Colors.grey[600]),
-                                                ),
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    displayName,
+                                                    style: TextStyle(
+                                                      fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
+                                                      color: isSelected 
+                                                          ? (isCurrentUser ? Colors.blue : Colors.black87)
+                                                          : (isCurrentUser ? Colors.blue[300] : Colors.grey[600]),
+                                                    ),
+                                                  ),
+                                                  if (displayName != member)
+                                                    Text(
+                                                      member,
+                                                      style: TextStyle(
+                                                        fontSize: 10,
+                                                        color: Colors.grey[500],
+                                                        fontStyle: FontStyle.italic,
+                                                      ),
+                                                    ),
+                                                ],
                                               ),
                                               if (hasChanges)
                                                 Padding(
@@ -511,8 +615,6 @@ class _NotesPageState extends State<NotesPage> {
                             Divider(height: 1, thickness: 1),
                             // Selected member's notes below
                             Expanded(
-                              child: RefreshIndicator(
-                                onRefresh: _loadNotes,
                                 child: _selectedMember == null
                                     ? SingleChildScrollView(
                                         physics: AlwaysScrollableScrollPhysics(),
@@ -530,7 +632,6 @@ class _NotesPageState extends State<NotesPage> {
                                         ),
                                       )
                                     : _buildNotesView(_selectedMember!, currentUsername),
-                              ),
                             ),
                           ],
                         ),

@@ -29,7 +29,7 @@ class _SignupPageState extends State<SignupPage> {
     if (username.isEmpty || password.isEmpty) {
       setState(() {
         _isLoading = false;
-        _response = 'Please enter both username and password.';
+        _response = 'Please enter both email and password.';
       });
       return;
     }
@@ -37,7 +37,7 @@ class _SignupPageState extends State<SignupPage> {
     // Register new user on the new API (requires passwordadmin)
     final url = Uri.parse('$apiBase/register');
     final body = {
-      'username': username,
+      'email': username, // Backend expects 'email' parameter
       'password': password,
       'passwordrepeat': password,
       'passwordadmin': 'afwan',
@@ -127,7 +127,11 @@ class _SignupPageState extends State<SignupPage> {
                   children: [
                     TextField(
                       controller: _usernameController,
-                      decoration: InputDecoration(labelText: 'Username'),
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        hintText: 'Enter your email address',
+                      ),
+                      keyboardType: TextInputType.emailAddress,
                     ),
                     SizedBox(height: 10),
                     TextField(

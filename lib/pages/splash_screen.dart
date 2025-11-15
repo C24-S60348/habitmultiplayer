@@ -7,6 +7,7 @@ import 'login_page.dart';
 import 'home_page.dart';
 import '../fy/main.dart';
 import '../test/main.dart';
+import 'update_profile_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -207,20 +208,37 @@ class _SplashScreenState extends State<SplashScreen> {
                     ),
                   ),
                 if (loggedInUser != 'guest')
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16.0),
-                    child: CustomButton(
-                      text: 'Logout',
-                      onPressed: () async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.remove('loggedInUsername'); // Clear the logged-in user
-                        await prefs.remove('token'); // Clear token
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(builder: (_) => SplashScreen()),
-                          (route) => false,
-                        );
-                      },
-                    ),
+                  Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16.0),
+                        child: CustomButton(
+                          text: 'Update Profile',
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => UpdateProfilePage(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16.0),
+                        child: CustomButton(
+                          text: 'Logout',
+                          onPressed: () async {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.remove('loggedInUsername'); // Clear the logged-in user
+                            await prefs.remove('token'); // Clear token
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (_) => SplashScreen()),
+                              (route) => false,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 SizedBox(height: 32),
                 Padding(

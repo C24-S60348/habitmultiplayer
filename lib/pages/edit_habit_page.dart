@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../utils/api_helpers.dart';
@@ -32,6 +33,7 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
   // Members tab state
   List<String> _members = [];
   String? _owner; // Store the owner separately
+  Map<String, String> _memberNames = {}; // Map username to name
   bool _isLoadingMembers = false;
 
   @override
@@ -93,11 +95,11 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
             if (membersData != null && membersData is List) {
               for (final member in membersData) {
                 if (member is Map) {
-                  final memberName = member['member']?.toString() ?? '';
-                  if (memberName.isNotEmpty && memberName != owner) {
+                  final memberUsername = member['member']?.toString() ?? '';
+                  if (memberUsername.isNotEmpty && memberUsername != owner) {
                     // Don't add duplicate if owner is already in members
-                    if (!membersList.contains(memberName)) {
-                      membersList.add(memberName);
+                    if (!membersList.contains(memberUsername)) {
+                      membersList.add(memberUsername);
                     }
                   }
                 } else if (member is String) {
@@ -111,9 +113,68 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
               }
             }
             
+            // Fetch member names from /readprofile API
+            Map<String, String> memberNamesMap = {};
+            debugPrint('=== FETCHING MEMBER NAMES (EDIT HABIT) ===');
+            debugPrint('Total members: ${membersList.length}');
+            debugPrint('Members list: $membersList');
+            debugPrint('Token is empty: ${token.isEmpty}');
+            
+            // Allow API call even for guest (readprofile now supports guest)
+            if (membersList.isNotEmpty) {
+              try {
+                final profileUrl = Uri.parse('$apiBase/readprofile');
+                final usernamesList = membersList.join(',');
+                debugPrint('Calling /readprofile API with usernames: $usernamesList');
+                final profileBody = {
+                  'token': token,
+                  'usernames': usernamesList,
+                };
+                final profileResponse = await safeHttpPost(profileUrl, body: profileBody);
+                debugPrint('Profile API response status: ${profileResponse?.statusCode}');
+                
+                if (profileResponse != null && profileResponse.statusCode == 200) {
+                  final profileData = jsonDecode(profileResponse.body);
+                  print('Profile API response: ${profileResponse.body}');
+                  debugPrint('Profile API response: ${profileResponse.body}');
+                  if (profileData['status'] == 'ok' && profileData['data'] != null) {
+                    final List<dynamic> profiles = profileData['data'] as List<dynamic>;
+                    print('Found ${profiles.length} profiles for ${membersList.length} members');
+                    debugPrint('Fetched ${profiles.length} profiles for ${membersList.length} members');
+                    debugPrint('Requested usernames: $usernamesList');
+                    for (final profile in profiles) {
+                      final p = profile as Map<String, dynamic>;
+                      final username = p['username']?.toString() ?? '';
+                      final name = p['name']?.toString() ?? '';
+                      print('Processing profile - username: $username, name: "$name"');
+                      debugPrint('Processing profile - username: $username, name: "$name"');
+                      if (username.isNotEmpty) {
+                        // Store name (even if empty, will fallback to username in display)
+                        memberNamesMap[username] = name;
+                        print('Stored name for $username: "${name.isEmpty ? "(empty)" : name}"');
+                        debugPrint('Profile for $username: name="${name.isEmpty ? "(empty)" : name}"');
+                      }
+                    }
+                    print('Final memberNamesMap: $memberNamesMap');
+                    debugPrint('Final memberNamesMap: $memberNamesMap');
+                  } else {
+                    print('Profile API error: ${profileData['status']} - ${profileData['message']}');
+                    debugPrint('Profile API error: ${profileData['status']} - ${profileData['message']}');
+                  }
+                } else {
+                  print('Profile API call failed: ${profileResponse?.statusCode}');
+                  debugPrint('Profile API call failed: ${profileResponse?.statusCode}');
+                }
+              } catch (e) {
+                // If API call fails, continue without names
+                debugPrint('Error fetching member names: $e');
+              }
+            }
+            
             setState(() {
               _owner = owner.isNotEmpty ? owner : null;
               _members = membersList;
+              _memberNames = memberNamesMap;
               _isLoadingMembers = false;
             });
             return;
@@ -318,6 +379,8 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
                     itemBuilder: (context, index) {
                       final member = _members[index];
                       final isOwner = member == _owner;
+                      final name = _memberNames[member];
+                      final displayName = (name != null && name.isNotEmpty) ? name : member;
                       return Card(
                         margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         color: isOwner ? Colors.blue[50] : null,
@@ -326,26 +389,43 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
                             isOwner ? Icons.person : Icons.person_outline,
                             color: isOwner ? Colors.blue : Theme.of(context).primaryColor,
                           ),
-                          title: Row(
+                          title: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                member,
-                                style: TextStyle(
-                                  fontWeight: isOwner ? FontWeight.bold : FontWeight.w500,
-                                  color: isOwner ? Colors.blue[900] : null,
-                                ),
-                              ),
-                              if (isOwner)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 8.0),
-                                  child: Chip(
-                                    label: Text(
-                                      'Owner',
-                                      style: TextStyle(fontSize: 10, color: Colors.white),
+                              Row(
+                                children: [
+                                  Text(
+                                    displayName,
+                                    style: TextStyle(
+                                      fontWeight: isOwner ? FontWeight.bold : FontWeight.w500,
+                                      color: isOwner ? Colors.blue[900] : null,
                                     ),
-                                    backgroundColor: Colors.blue,
-                                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  if (isOwner)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 8.0),
+                                      child: Chip(
+                                        label: Text(
+                                          'Owner',
+                                          style: TextStyle(fontSize: 10, color: Colors.white),
+                                        ),
+                                        backgroundColor: Colors.blue,
+                                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              if (displayName != member)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                    member,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                      fontStyle: FontStyle.italic,
+                                    ),
                                   ),
                                 ),
                             ],

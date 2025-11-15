@@ -6,6 +6,7 @@ import '../utils/api_helpers.dart';
 import '../widgets/custom_button.dart';
 import 'signup_page.dart';
 import 'splash_screen.dart';
+import 'forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -40,7 +41,7 @@ class _LoginPageState extends State<LoginPage> {
 
     final url = Uri.parse('$apiBase/login');
     final body = {
-      'username': username,
+      'email': username, // Backend expects 'email' parameter
       'password': password,
       'keeptoken': 'yes',
     };
@@ -139,7 +140,7 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     TextField(
                       controller: _usernameController,
-                      decoration: InputDecoration(labelText: 'Username'),
+                      decoration: InputDecoration(labelText: 'Email'),
                       textInputAction: TextInputAction.next,
                       onSubmitted: (_) => FocusScope.of(context).nextFocus(),
                     ),
@@ -158,6 +159,17 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     SizedBox(height: 20),
                     Text(_response),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => ForgotPasswordPage(),
+                          ),
+                        );
+                      },
+                      child: Text('Forgot Password?'),
+                    ),
+                    SizedBox(height: 8),
                     TextButton(
                       onPressed: () {
                         Navigator.of(context).push(
