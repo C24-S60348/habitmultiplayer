@@ -271,7 +271,7 @@ class _NotesPageState extends State<NotesPage> {
       allMembersSet = allMembers;
       controllersMap = controllers;
       notesChangedMap = changedMap;
-      memberNamesMap = memberNamesMap; // Store names from readprofile API
+      this.memberNamesMap = memberNamesMap; // Store names from readprofile API
       _selectedMember = selectedMember;
       _isLoading = false;
     });
@@ -328,15 +328,6 @@ class _NotesPageState extends State<NotesPage> {
                           color: isCurrentUser ? Colors.blue : Colors.black87,
                         ),
                       ),
-                      if (_getDisplayName(member) != member)
-                        Text(
-                          member,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -572,15 +563,6 @@ class _NotesPageState extends State<NotesPage> {
                                                           : (isCurrentUser ? Colors.blue[300] : Colors.grey[600]),
                                                     ),
                                                   ),
-                                                  if (displayName != member)
-                                                    Text(
-                                                      member,
-                                                      style: TextStyle(
-                                                        fontSize: 10,
-                                                        color: Colors.grey[500],
-                                                        fontStyle: FontStyle.italic,
-                                                      ),
-                                                    ),
                                                 ],
                                               ),
                                               if (hasChanges)

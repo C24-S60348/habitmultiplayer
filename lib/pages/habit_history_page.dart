@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../utils/api_helpers.dart';
@@ -16,6 +17,7 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
   // Map from dateKey to list of user entries: {username: String, status: int}
   Map<String, List<Map<String, dynamic>>> habitMap = {};
   Set<String> allMembersSet = {}; // Store all members (from habit and history)
+  Map<String, String> memberNamesMap = {}; // Map from username to display name
   bool isLoading = true;
   int centerOffset = 0;
   String? _loadingDateKey; // Add this to track which date is being updated
@@ -111,20 +113,118 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
         // Combine members from habit and history
         final allMembers = {...membersFromHabit, ...membersFromHistory};
         
+        // Fetch member names from /readprofile API
+        Map<String, String> memberNamesMap = {};
+        if (allMembers.isNotEmpty) {
+          try {
+            final profileUrl = Uri.parse('$apiBase/readprofile');
+            final usernamesList = allMembers.join(',');
+            final profileBody = {
+              'token': token,
+              'usernames': usernamesList,
+            };
+            final profileResponse = await safeHttpPost(profileUrl, body: profileBody);
+            
+            if (profileResponse != null && profileResponse.statusCode == 200) {
+              final profileData = jsonDecode(profileResponse.body);
+              if (profileData['status'] == 'ok' && profileData['data'] != null) {
+                final List<dynamic> profiles = profileData['data'] as List<dynamic>;
+                for (final profile in profiles) {
+                  final p = profile as Map<String, dynamic>;
+                  final username = p['username']?.toString() ?? '';
+                  final name = p['name']?.toString() ?? '';
+                  if (username.isNotEmpty) {
+                    // Store name (even if empty, will fallback to username in display)
+                    memberNamesMap[username] = name;
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // If API call fails, continue without names
+            debugPrint('Error fetching member names: $e');
+          }
+        }
+        
         setState(() {
           habitMap = map;
           allMembersSet = allMembers;
+          this.memberNamesMap = memberNamesMap;
           isLoading = false;
         });
       } else {
+        // Fetch member names even if history fetch failed
+        Map<String, String> memberNamesMap = {};
+        if (membersFromHabit.isNotEmpty) {
+          try {
+            final profileUrl = Uri.parse('$apiBase/readprofile');
+            final usernamesList = membersFromHabit.join(',');
+            final profileBody = {
+              'token': token,
+              'usernames': usernamesList,
+            };
+            final profileResponse = await safeHttpPost(profileUrl, body: profileBody);
+            
+            if (profileResponse != null && profileResponse.statusCode == 200) {
+              final profileData = jsonDecode(profileResponse.body);
+              if (profileData['status'] == 'ok' && profileData['data'] != null) {
+                final List<dynamic> profiles = profileData['data'] as List<dynamic>;
+                for (final profile in profiles) {
+                  final p = profile as Map<String, dynamic>;
+                  final username = p['username']?.toString() ?? '';
+                  final name = p['name']?.toString() ?? '';
+                  if (username.isNotEmpty) {
+                    memberNamesMap[username] = name;
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            debugPrint('Error fetching member names: $e');
+          }
+        }
+        
         setState(() {
           allMembersSet = membersFromHabit;
+          this.memberNamesMap = memberNamesMap;
           isLoading = false;
         });
       }
     } else {
+      // Fetch member names even if history fetch failed
+      Map<String, String> memberNamesMap = {};
+      if (membersFromHabit.isNotEmpty) {
+        try {
+          final profileUrl = Uri.parse('$apiBase/readprofile');
+          final usernamesList = membersFromHabit.join(',');
+          final profileBody = {
+            'token': token,
+            'usernames': usernamesList,
+          };
+          final profileResponse = await safeHttpPost(profileUrl, body: profileBody);
+          
+          if (profileResponse != null && profileResponse.statusCode == 200) {
+            final profileData = jsonDecode(profileResponse.body);
+            if (profileData['status'] == 'ok' && profileData['data'] != null) {
+              final List<dynamic> profiles = profileData['data'] as List<dynamic>;
+              for (final profile in profiles) {
+                final p = profile as Map<String, dynamic>;
+                final username = p['username']?.toString() ?? '';
+                final name = p['name']?.toString() ?? '';
+                if (username.isNotEmpty) {
+                  memberNamesMap[username] = name;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Error fetching member names: $e');
+        }
+      }
+      
       setState(() {
         allMembersSet = membersFromHabit;
+        this.memberNamesMap = memberNamesMap;
         isLoading = false;
       });
     }
@@ -253,6 +353,12 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
     return allMembersSet.toList()..sort();
   }
 
+  String _getDisplayName(String username) {
+    // Return name if available and not empty, otherwise return username
+    final name = memberNamesMap[username];
+    return (name != null && name.isNotEmpty) ? name : username;
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<String>(
@@ -345,12 +451,28 @@ class _HabitHistoryPageState extends State<HabitHistoryPage> {
                                     children: [
                                       Icon(Icons.person, color: Theme.of(context).primaryColor),
                                       SizedBox(width: 8),
-                                      Text(
-                                        member,
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
-                                          color: isCurrentUser ? Colors.blue : Colors.black87,
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              _getDisplayName(member),
+                                              style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
+                                                color: isCurrentUser ? Colors.blue : Colors.black87,
+                                              ),
+                                            ),
+                                            if (_getDisplayName(member) != member)
+                                              Text(
+                                                member,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                          ],
                                         ),
                                       ),
                                     ],

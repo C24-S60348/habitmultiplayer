@@ -62,6 +62,7 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
   }
 
   Future<void> _loadMembers() async {
+    if (!mounted) return;
     setState(() {
       _isLoadingMembers = true;
     });
@@ -171,21 +172,25 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
               }
             }
             
-            setState(() {
-              _owner = owner.isNotEmpty ? owner : null;
-              _members = membersList;
-              _memberNames = memberNamesMap;
-              _isLoadingMembers = false;
-            });
+            if (mounted) {
+              setState(() {
+                _owner = owner.isNotEmpty ? owner : null;
+                _members = membersList;
+                _memberNames = memberNamesMap;
+                _isLoadingMembers = false;
+              });
+            }
             return;
           }
         }
       }
     }
     
-    setState(() {
-      _isLoadingMembers = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoadingMembers = false;
+      });
+    }
   }
 
   @override
@@ -486,6 +491,7 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
   }
 
   Future<void> _addMember(String member) async {
+    if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
     final url = Uri.parse('$apiBase/addmember');
@@ -496,6 +502,7 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
     };
     final response = await safeHttpPost(url, body: body);
 
+    if (!mounted) return;
     if (response != null && response.statusCode == 200) {
       final data = safeJsonDecode(response.body);
       if (data != null && data['status'] == 'ok') {
@@ -525,6 +532,7 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
   }
 
   Future<void> _removeMember(String member) async {
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -543,7 +551,7 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
@@ -555,6 +563,7 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
     };
     final response = await safeHttpPost(url, body: body);
 
+    if (!mounted) return;
     if (response != null && response.statusCode == 200) {
       final data = safeJsonDecode(response.body);
       if (data != null && data['status'] == 'ok') {
@@ -622,6 +631,7 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
       if (!shouldContinue) return;
     }
 
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
@@ -642,23 +652,27 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
       final errorMsg = updateNameResp != null
           ? (jsonDecode(updateNameResp.body)['message']?.toString() ?? 'Failed to update title')
           : 'Network error. Please check your connection.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-      );
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
       return;
     }
     final updateNameData = jsonDecode(updateNameResp.body);
     if (updateNameData['status'] != 'ok') {
       final errorMsg = updateNameData['message']?.toString() ?? 'Failed to update title';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-      );
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
       return;
     }
 
@@ -676,23 +690,27 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
         final errorMsg = updateUrlResp != null
             ? (jsonDecode(updateUrlResp.body)['message']?.toString() ?? 'Failed to update link')
             : 'Network error. Please check your connection.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-        );
-        setState(() {
-          _isLoading = false;
-        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
         return;
       }
       final updateUrlData = jsonDecode(updateUrlResp.body);
       if (updateUrlData['status'] != 'ok') {
         final errorMsg = updateUrlData['message']?.toString() ?? 'Failed to update link';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-        );
-        setState(() {
-          _isLoading = false;
-        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
         return;
       }
     }
@@ -703,12 +721,15 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
         'link': _linkController.text,
       });
 
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _deleteHabit() async {
+    if (!mounted) return;
     // Show confirmation dialog
     final shouldDelete = await showDialog<bool>(
       context: context,
@@ -728,11 +749,13 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
       ),
     );
 
-    if (shouldDelete != true) return;
+    if (shouldDelete != true || !mounted) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
@@ -743,11 +766,14 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
     };
     await safeHttpPost(url, body: body);
 
+    if (!mounted) return;
     // Pop back to previous page with delete flag
     Navigator.of(context).pop({'deleted': true});
 
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 }

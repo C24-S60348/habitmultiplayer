@@ -69,6 +69,7 @@ class _InsidePageState extends State<InsidePage>
       };
       final response = await safeHttpPost(url, body: body);
       if (response == null) {
+        if (!mounted) return;
         setState(() {
           _isLoadingHabitState = false;
         });
@@ -113,38 +114,18 @@ class _InsidePageState extends State<InsidePage>
             }
           }
           
+          if (!mounted) return;
           setState(() {
             if (mineToday != null && mineToday['historystatus'] != null) {
               _habitState = int.tryParse(mineToday['historystatus']?.toString() ?? '0') ?? 0;
-              
-              // Debug: Show what state was found
-              // if (mounted) {
-              //   ScaffoldMessenger.of(context).showSnackBar(
-              //     SnackBar(
-              //       content: Text('✅ Found state: $_habitState for $username on $dateKey'),
-              //       duration: Duration(seconds: 2),
-              //       backgroundColor: Colors.green,
-              //     ),
-              //   );
-              // }
             } else {
               _habitState = 0; // Default to unchecked if no entry found
-              
-              // Debug: Show that no entry was found
-              // if (mounted) {
-              //   ScaffoldMessenger.of(context).showSnackBar(
-              //     SnackBar(
-              //       content: Text('⚠️ No history found for $username on $dateKey (Looking for: username="$username", date="$dateKey")'),
-              //       duration: Duration(seconds: 3),
-              //       backgroundColor: Colors.orange,
-              //     ),
-              //   );
-              // }
             }
             _isLoadingHabitState = false;
           });
         } else {
           // API returned error status
+          if (!mounted) return;
           setState(() {
             _isLoadingHabitState = false;
           });
@@ -160,6 +141,7 @@ class _InsidePageState extends State<InsidePage>
         }
       } else {
         // HTTP error
+        if (!mounted) return;
         setState(() {
           _isLoadingHabitState = false;
         });
@@ -175,9 +157,11 @@ class _InsidePageState extends State<InsidePage>
       }
     } catch (e) {
       print('Error loading habit state: $e');
-      setState(() {
-        _isLoadingHabitState = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingHabitState = false;
+        });
+      }
       // if (mounted) {
       //   ScaffoldMessenger.of(context).showSnackBar(
       //     SnackBar(
@@ -191,6 +175,7 @@ class _InsidePageState extends State<InsidePage>
   }
 
   Future<void> _cycleHabitState() async {
+    if (!mounted) return;
     // Store previous state for potential revert
     final previousState = _habitState;
     
@@ -216,9 +201,11 @@ class _InsidePageState extends State<InsidePage>
     }
     
     // Update UI optimistically
-    setState(() {
-      _habitState = newState;
-    });
+    if (mounted) {
+      setState(() {
+        _habitState = newState;
+      });
+    }
     
     // Debug: Show what we're trying to save
     // if (mounted) {
@@ -242,10 +229,12 @@ class _InsidePageState extends State<InsidePage>
       final response = await safeHttpPost(url, body: body);
       if (response == null) {
         // Revert on network error
-        setState(() {
-          _habitState = previousState; // Revert to previous state
-          _isLoadingHabitState = false;
-        });
+        if (mounted) {
+          setState(() {
+            _habitState = previousState; // Revert to previous state
+            _isLoadingHabitState = false;
+          });
+        }
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -317,9 +306,11 @@ class _InsidePageState extends State<InsidePage>
       // On error, reload to get actual state from server
       await _loadHabitState();
     } finally {
-      setState(() {
-        _isLoadingHabitState = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingHabitState = false;
+        });
+      }
     }
   }
 

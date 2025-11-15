@@ -150,6 +150,9 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
             duration: Duration(seconds: 2),
           ),
         );
+        
+        // Return result indicating profile was updated
+        Navigator.of(context).pop({'profileUpdated': true});
       } else {
         setState(() {
           _isSuccess = false;
