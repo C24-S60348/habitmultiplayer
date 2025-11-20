@@ -333,7 +333,7 @@ class _NotesPageState extends State<NotesPage> {
                 ),
                 if (isCurrentUser && hasChanges)
                   Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
+                    padding: const EdgeInsets.only(top: 16.0, right: 8.0),
                     child: Text(
                       '(unsaved)',
                       style: TextStyle(
@@ -343,6 +343,37 @@ class _NotesPageState extends State<NotesPage> {
                       ),
                     ),
                   ),
+                if (isCurrentUser)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton(
+                        onPressed: (isSaving || !hasChanges) ? null : () {
+                          _updateNotesOnServer(member, controller.text);
+                        },
+                        child: isSaving
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text('Saving...'),
+                                ],
+                              )
+                            : Text('Save Notes'),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
             SizedBox(height: 16),
