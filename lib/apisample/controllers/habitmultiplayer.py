@@ -10,13 +10,11 @@ from ..utils.excel_helper import *
 from ..utils.login_helper import *
 from ..models.habitmultiplayer import *
 from ..utils.checker_helper import *
+from ..utils.db_helper import *
+import os
+import sqlite3
 
-habitcsv = "static/db/habit/habit.csv"
-notescsv  = "static/db/habit/notes.csv"
-playerscsv = "static/db/habit/players.csv"
-userscsv = "static/db/habit/users.csv"
-historycsv = "static/db/habit/history.csv"
-membercsv = "static/db/habit/member.csv"
+dbloc = "static/db/habit.db"
 
 """
 Nota:
@@ -29,19 +27,14 @@ Member
 History
 -Read   -Update/Add
 
-Todo
--fix - orang baru tkleh add notes
--added member ada satu je data
-
-
 ---All based on token, if no token, == "guest"
+
 
 """
 
 
 #habit
 #http://127.0.0.1:5001/api/habit/createhabit?url=ayammm&name=ikan23
-#http://127.0.0.1:5001/api/habit/readhabit?targetname=id&targetdata=6
 #http://127.0.0.1:5001/api/habit/readhabit
 #http://127.0.0.1:5001/api/habit/updatehabit?id=12&newname=name&newdata=afwan1234
 #http://127.0.0.1:5001/api/habit/deletehabit?id=12
@@ -50,18 +43,160 @@ Todo
 #http://127.0.0.1:5001/api/habit/readnote?habitid=2
 #http://127.0.0.1:5001/api/habit/updatenote?habitid=2&notes=heyyoo
 
-#member
-#http://127.0.0.1:5001/api/habit/addmember?habitid=4&member=afwanhaziq
-#http://127.0.0.1:5001/api/habit/deletemember?habitid=4&member=afwanhaziq
-
 #history
 #http://127.0.0.1:5001/api/habit/readhistory?habitid=1
 #http://127.0.0.1:5001/api/habit/updatehistory?habitid=1&historydate=2025-10-11&historystatus=-1
 
-restrictmode = True
+restrictmode = False
 habitmultiplayer_blueprint = Blueprint('habitmultiplayer', __name__, url_prefix="/api/habit")
 
+@habitmultiplayer_blueprint.route('/initdb', methods=['GET', 'POST'])
+def initdb():
+    """
+    Initialize Habit Multiplayer SQLite database (create db file + required tables).
+    This endpoint is idempotent (safe to call multiple times).
+    """
+    # Ensure folder exists (and DB file will be created on first connect)
+    db_dir = os.path.dirname(dbloc)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
 
+    conn = sqlite3.connect(dbloc)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON;")
+
+        # users: used by habitmultiplayer.py + habitmultiplayer2.py
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                password TEXT,
+                token TEXT,
+                name TEXT,
+                forgotpassword TEXT,
+                created_at DATETIME,
+                deleted_at DATETIME
+            );
+            """
+        )
+
+        # habit: used by habitmultiplayer.py
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS habit (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT,
+                url TEXT,
+                name TEXT,
+                created_at DATETIME,
+                deleted_at DATETIME
+            );
+            """
+        )
+
+        # member: used by habitmultiplayer.py + habitmultiplayer2.py
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS member (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                habitid INTEGER NOT NULL,
+                member TEXT NOT NULL,
+                created_at DATETIME,
+                deleted_at DATETIME
+            );
+            """
+        )
+
+        # notes: used by habitmultiplayer.py
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT,
+                habitid INTEGER NOT NULL,
+                notes TEXT,
+                created_at DATETIME,
+                deleted_at DATETIME
+            );
+            """
+        )
+
+        # history: used by habitmultiplayer.py
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT,
+                habitid INTEGER NOT NULL,
+                historydate TEXT,
+                historystatus TEXT,
+                created_at DATETIME,
+                deleted_at DATETIME
+            );
+            """
+        )
+
+        # deleteaccount: used by habitmultiplayer2.py
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS deleteaccount (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT,
+                password TEXT,
+                created_at DATETIME,
+                deleted_at DATETIME
+            );
+            """
+        )
+
+        # Helpful indexes for common lookups
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_token ON users(token);")
+
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_habit_username ON habit(username);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_member_habitid ON member(habitid);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_member_member ON member(member);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_notes_habitid ON notes(habitid);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_habitid ON history(habitid);")
+
+        conn.commit()
+
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;")
+        tables = [r[0] for r in cursor.fetchall()]
+        return jsonify({
+            "status": "ok",
+            "message": "initdb done",
+            "db": dbloc,
+            "tables": tables,
+        })
+    finally:
+        conn.close()
+    
+@habitmultiplayer_blueprint.route('/test', methods=['GET', 'POST'])
+def test():
+    
+    query = "SELECT * FROM habit WHERE (deleted_at IS NULL or deleted_at = '');"
+    params = ()
+
+    # query = "INSERT INTO habit (name, username, created_at) VALUES (?, ?, ?)"
+    # params = ("ayam", "ikan", datetime.now())
+
+    query = "UPDATE habit SET username = ? WHERE id = ?"
+    params = ("ayam", 4)
+
+    #Get all tables list
+    query = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"
+    params = ()
+
+    dbdata = af_getdb("my_database.db", query, params)
+
+    return jsonify({
+        "status": "ok",
+        "message": dbdata
+    })
+    
     
 @habitmultiplayer_blueprint.route('/createhabit', methods=['GET', 'POST'])
 def createhabitapi():
@@ -82,38 +217,32 @@ def createhabitapi():
                 "message": "Guest cannot perform this action. Please login."
             })
         username = 'guest'
-        data = {}
-        data['csv'] = habitcsv
-        data['username'] = username
-        data['url'] = url
-        data['name'] = name
-        data['created_at'] = datetime.now()
-        data['deleted_at'] = ""
-        createdata = ccreate(data)
+        
+        query = "INSERT INTO habit (username,url,name,created_at) VALUES (?,?,?,?);"
+        params = (username,url,name,datetime.now(),)
+        dbdata = af_getdb(dbloc, query, params)
 
         return jsonify({
             "status": "ok",
             "message": "habit careated",
-            "data" : createdata
+            "data" : dbdata
         })
 
-    mydata = modelchecktokendata(token, userscsv)
-    if mydata:
-        username = mydata['username']
-        data = {}
-        data['csv'] = habitcsv
-        data['username'] = username
-        data['url'] = url
-        data['name'] = name
-        data['created_at'] = datetime.now()
-        data['deleted_at'] = ""
-        createdata = ccreate(data)
+    query = "SELECT * FROM users WHERE token = ? AND deleted_at IS NULL"
+    params = (token,)
+    dbdata = af_getdb(dbloc, query, params)
+
+    if dbdata:
+        username = dbdata[0]['username']
+        query = "INSERT INTO habit (username,url,name,created_at) VALUES (?,?,?,?);"
+        params = (username,url,name,datetime.now(),)
+        dbdata = af_getdb(dbloc, query, params)
 
         return jsonify(
             {
                 "status": "ok",
                 "message": "habit careated",
-                "data": createdata
+                "data": dbdata
             }
         )
     else:
@@ -129,50 +258,82 @@ def readhabitapi():
 
     token = getpostget("token")
 
-    mydata = modelchecktokendata(token, userscsv)
-    if mydata or inputnotvalidated(token):
+    query = "SELECT * FROM users WHERE token = ? AND deleted_at IS NULL"
+    params = (token,)
+    dbdata = af_getdb(dbloc, query, params)
+    if dbdata or inputnotvalidated(token):
         if inputnotvalidated(token):
             username = "guest"
         else:
-            username = mydata['username']
-
-        data = {}
-        data['csv'] = habitcsv
-        data['targetname'] = "username"
-        data['targetdata'] = username
-        getdata = cread(data)
-
-        data = {}
-        data['csv'] = membercsv
-        data['targetname'] = "member"
-        data['targetdata'] = username
-        getdata2 = cread(data)
-        getdata3 = []
-        getdata5 = []
-
-        for g in getdata2:
-            data = {}
-            data['csv'] = habitcsv
-            data['targetname'] = "id"
-            data['targetdata'] = g["habitid"]
-            getdata3 = cread(data)
-            if getdata3 != []:
-                getdata5.append(getdata3[0])
+            username = dbdata[0]['username']
         
-        getdata.extend(getdata5)
+        query = "SELECT * FROM habit "
+        query += "WHERE username = ? AND deleted_at IS NULL"
+        params = (username,)
+        dbdata = af_getdb(dbloc, query, params)
 
-        for g in getdata:
-            data = {}
-            data['csv'] = membercsv
-            data['targetname'] = "habitid"
-            data['targetdata'] = g["id"]
-            getdata4 = cread(data)
-            g["members"] = getdata4
+        # for g in dbdata:
+        #     if g["member"] == None:
+        #         g["member"] = []
+        
+        # query = "SELECT * FROM member "
+        # query += "WHERE member = ? AND deleted_at IS NULL"
+        # params = (username,)
+        # dbdata = af_getdb(dbloc, query, params)
+
+        # data = {}
+        # data['csv'] = habitcsv
+        # data['targetname'] = "username"
+        # data['targetdata'] = username
+        # getdata = cread(data)
+
+        # data = {}
+        # data['csv'] = membercsv
+        # data['targetname'] = "member"
+        # data['targetdata'] = username
+        # getdata2 = cread(data)
+        # getdata3 = []
+        # getdata5 = []
+
+        # for g in getdata2:
+        #     data = {}
+        #     data['csv'] = habitcsv
+        #     data['targetname'] = "id"
+        #     data['targetdata'] = g["habitid"]
+        #     getdata3 = cread(data)
+        #     if getdata3 != []:
+        #         getdata5.append(getdata3[0])
+        
+        # getdata.extend(getdata5)
+
+        # for g in getdata:
+        #     data = {}
+        #     data['csv'] = membercsv
+        #     data['targetname'] = "habitid"
+        #     data['targetdata'] = g["id"]
+        #     getdata4 = cread(data)
+        #     g["members"] = getdata4
+
+        query = "SELECT * FROM habit "
+        query += "INNER JOIN member ON habit.id = member.habitid "
+        query += "WHERE member.member = ? AND member.deleted_at IS NULL"
+        params = (username,)
+        dbdata3 = af_getdb(dbloc, query, params)
+        
+        dbdata.extend(dbdata3)
+        
+        #get members
+        for g in dbdata:
+            query = "SELECT * FROM member "
+            query += "WHERE habitid = ? AND deleted_at IS NULL"
+            params = (g["id"],)
+            dbdata2 = af_getdb(dbloc, query, params)
+            g["members"] = dbdata2
 
         return jsonify({
             "status": "ok",
             "message": "get habit",
-            "data" : getdata,
+            "data" : dbdata,
         })
     else:
         return jsonify(
@@ -197,8 +358,10 @@ def updatehabitapi():
     if inputnotvalidated(newdata):
         return jsonifynotvalid("newdata")
     
-    mydata = modelchecktokendata(token, userscsv)
-    if mydata or inputnotvalidated(token):
+    query = "SELECT * FROM users WHERE token = ? AND deleted_at IS NULL"
+    params = (token,)
+    dbdata = af_getdb(dbloc, query, params)
+    if dbdata or inputnotvalidated(token):
 
         if inputnotvalidated(token):
             username = "guest"
@@ -209,41 +372,40 @@ def updatehabitapi():
                     "message": "Guest cannot perform this action. Please login."
                 })
         else:
-            username = mydata['username']
+            username = dbdata[0]['username']
         
-        data = {}
-        data['csv'] = habitcsv
-        data['targetname'] = "id"
-        data['targetdata'] = str(id)
-        getdata = cread(data)
+        query = "SELECT * FROM habit WHERE id = ? AND deleted_at IS NULL"
+        params = (id,)
+        dbdata = af_getdb(dbloc, query, params)
+
         #the data was user's data
         cango = False
-        if getdata == []:
+        if dbdata == []:
             return jsonify(
                 {
                     "status": "error",
                     "message": "The habit is not available"
                 }
             )
-        for g in getdata:
+        for g in dbdata:
             if g['username'] == username:
                 cango = True
 
         if cango:
-            data = {}
-            data['csv'] = habitcsv
-            data['targetname'] = "id"
-            data['targetdata'] = str(id)
-            data['newname'] = newname
-            data['newdata'] = newdata
+            query = f"UPDATE habit SET {newname} = ? WHERE id = ? "
+            params = (newdata, id,)
+            dbdata = af_getdb(dbloc, query, params)
 
-            cupdate(data)
-            readdata = cread(data)
+            # cupdate(data)
+            query = f"SELECT * FROM habit WHERE id = ? AND deleted_at IS NULL"
+            params = (id,)
+            dbdata = af_getdb(dbloc, query, params)
+            # readdata = cread(data)
 
             return  jsonify({
                 "status": "ok",
                 "message": "updated",
-                "data": readdata
+                "data": dbdata
             })
         else:
             return jsonify(
@@ -265,8 +427,10 @@ def deletehabitapi():
     id = getpostget("id")
     token = getpostget("token")
 
-    mydata = modelchecktokendata(token, userscsv)
-    if mydata or inputnotvalidated(token):
+    query = "SELECT * FROM users WHERE token = ? AND deleted_at IS NULL"
+    params = (token,)
+    dbdata = af_getdb(dbloc, query, params)
+    if dbdata or inputnotvalidated(token):
 
         if inputnotvalidated(token):
             username = "guest"
@@ -277,38 +441,34 @@ def deletehabitapi():
                     "message": "Guest cannot perform this action. Please login."
                 })
         else:
-            username = mydata['username']
+            username = dbdata[0]['username']
         
-        data = {}
-        data['csv'] = habitcsv
-        data['targetname'] = "id"
-        data['targetdata'] = str(id)
-        getdata = cread(data)
+        query = f"SELECT * FROM habit WHERE id = ? AND deleted_at IS NULL "
+        params = (id,)
+        dbdata = af_getdb(dbloc, query, params)
+        
         #the data was user's data
         cango = False
-        if getdata == []:
+        if dbdata == []:
             return jsonify(
                 {
                     "status": "error",
                     "message": "The habit is not available"
                 }
             )
-        for g in getdata:
+        for g in dbdata:
             if g['username'] == username:
                 cango = True
 
         if cango:
 
-            data = {}
-            data['csv'] = habitcsv
-            data['targetname'] = "id"
-            data['targetdata'] = str(id)
-            getdata = cdelete(data)
+            query = f"UPDATE habit SET deleted_at = ? WHERE id = ?"
+            params = (datetime.now(),id,)
+            dbdata = af_getdb(dbloc, query, params)
 
             return jsonify({
                 "status": "ok",
                 "message": "deleted",
-                "deleted_at" : getdata['deleted_at'],
             })
         
         else:
@@ -334,6 +494,7 @@ def updatenote():
     habitid = getpostget("habitid")
     notes = getpostget("notes")
     token = getpostget("token")
+    alluser = getpostget("alluser")
     
     if inputnotvalidated(habitid):
         return jsonifynotvalid("habitid")
@@ -341,8 +502,10 @@ def updatenote():
         return jsonifynotvalid("notes")
     
 
-    mydata = modelchecktokendata(token, userscsv)
-    if mydata or inputnotvalidated(token):
+    query = "SELECT * FROM users WHERE token = ? AND deleted_at IS NULL"
+    params = (token,)
+    dbdata = af_getdb(dbloc, query, params)
+    if dbdata or inputnotvalidated(token):
         if inputnotvalidated(token):
             username = "guest"
             if restrictmode:
@@ -352,42 +515,36 @@ def updatenote():
                     "message": "Guest cannot perform this action. Please login."
                 })
         else:
-            username = mydata['username']
+            username = dbdata[0]['username']
         
-        data = {}
-        data['csv'] = notescsv
-        data['targetname'] = "habitid"
-        data['targetdata'] = str(habitid)
-        data['targetname2'] = "username"
-        data['targetdata2'] = str(username)
-        data['newname'] = "notes"
-        data['newdata'] = str(notes)
-        updateddata = cupdate2(data)
-        if updateddata:
-            readdata = cread2(data)
-            return jsonify(
+        if alluser == "yes":
+            username = "alluser"
+        
+        
+        query = f"SELECT * FROM notes WHERE habitid = ? AND username = ? AND deleted_at IS NULL"
+        params = (habitid,username,)
+        dbdata = af_getdb(dbloc, query, params)
+        
+        if dbdata:
+            query = f"UPDATE notes SET notes = ? WHERE habitid = ? AND username = ?"
+            params = (notes, habitid, username,)
+            dbdata = af_getdb(dbloc, query, params)
+
+        else:
+            
+            query = f"INSERT INTO notes (username,habitid,notes,created_at) VALUES (?,?,?,?)"
+            params = (username,habitid,notes,datetime.now(),)
+            dbdata = af_getdb(dbloc, query, params)
+        
+        query = f"SELECT * FROM notes WHERE habitid = ? AND username = ? AND deleted_at IS NULL"
+        params = (habitid,username,)
+        dbdata = af_getdb(dbloc, query, params)
+
+        return jsonify(
                 {
                     "status": "ok",
                     "message": "noteds updated",
-                    "data": readdata
-                }
-            )
-        else:
-            
-            data = {}
-            data['csv'] = notescsv
-            data['username'] = username
-            data['habitid'] = habitid
-            data['notes'] = notes
-            data['created_at'] = datetime.now()
-            data['deleted_at'] = ""
-            createdata = ccreate(data)
-
-            return jsonify(
-                {
-                    "status": "ok",
-                    "message": "noteds careated",
-                    "data": createdata
+                    "data": dbdata
                 }
             )
     else:
@@ -410,37 +567,35 @@ def readnote():
     if inputnotvalidated(habitid):
         return jsonifynotvalid("habitid")
 
-    mydata = modelchecktokendata(token, userscsv)
-    if mydata or inputnotvalidated(token):
+    query = "SELECT * FROM users WHERE token = ? AND deleted_at IS NULL"
+    params = (token,)
+    dbdata = af_getdb(dbloc, query, params)
+    if dbdata or inputnotvalidated(token):
         if inputnotvalidated(token):
             username = "guest"
         else:
-            username = mydata['username']
+            username = dbdata[0]['username']
         
-        data = {}
-        data['csv'] = notescsv
-        data['targetname'] = "habitid"
-        data['targetdata'] = habitid
-        getdata = cread(data)
+        query = f"SELECT * FROM notes WHERE habitid = ? AND deleted_at IS NULL"
+        params = (habitid,)
+        dbdata = af_getdb(dbloc, query, params)
 
-        data = {}
-        data['csv'] = habitcsv
-        data['targetname'] = "id"
-        data['targetdata'] = habitid
-        getdata3 = cread(data)
-        owner = getdata3[0]['username']
+        #get members
+        query = f"SELECT * FROM member WHERE habitid = ? AND deleted_at IS NULL"
+        params = (habitid,)
+        dbdata2 = af_getdb(dbloc, query, params)
 
-        data = {}
-        data['csv'] = membercsv
-        data['targetname'] = "habitid"
-        data['targetdata'] = habitid
-        getdata4 = cread(data)
+        #get owner
+        query = f"SELECT * FROM habit WHERE id = ? "
+        params = (habitid,)
+        dbdata3 = af_getdb(dbloc, query, params)
+        owner = dbdata3[0]['username']
 
         return jsonify({
             "status": "ok",
             "message": "get notes",
-            "data" : getdata,
-            "members": getdata4,
+            "data" : dbdata,
+            "members": dbdata2,
             "owner": owner,
         })
     else:
@@ -465,37 +620,36 @@ def readhistory():
     if inputnotvalidated(habitid):
         return jsonifynotvalid("habitid")
 
-    mydata = modelchecktokendata(token, userscsv)
-    if mydata or inputnotvalidated(token):
+    query = "SELECT * FROM users WHERE token = ? AND deleted_at IS NULL"
+    params = (token,)
+    dbdata = af_getdb(dbloc, query, params)
+    if dbdata or inputnotvalidated(token):
         if inputnotvalidated(token):
             username = "guest"
         else:
-            username = mydata['username']
+            username = dbdata[0]['username']
         
-        data = {}
-        data['csv'] = historycsv
-        data['targetname'] = "habitid"
-        data['targetdata'] = habitid
-        getdata = cread(data)
 
-        data = {}
-        data['csv'] = habitcsv
-        data['targetname'] = "id"
-        data['targetdata'] = habitid
-        getdata3 = cread(data)
-        owner = getdata3[0]['username']
+        query = f"SELECT * FROM history WHERE habitid = ? AND deleted_at IS NULL"
+        params = (habitid,)
+        dbdata = af_getdb(dbloc, query, params)
 
-        data = {}
-        data['csv'] = membercsv
-        data['targetname'] = "habitid"
-        data['targetdata'] = habitid
-        getdata4 = cread(data)
+        #get members
+        query = f"SELECT * FROM member WHERE habitid = ? AND deleted_at IS NULL"
+        params = (habitid,)
+        dbdata2 = af_getdb(dbloc, query, params)
+
+        #get owner
+        query = f"SELECT * FROM habit WHERE id = ? "
+        params = (habitid,)
+        dbdata3 = af_getdb(dbloc, query, params)
+        owner = dbdata3[0]['username']
 
         return jsonify({
             "status": "ok",
             "message": "get history",
-            "data" : getdata,
-            "members": getdata4,
+            "data" : dbdata,
+            "members": dbdata2,
             "owner": owner,
         })
     else:
@@ -522,51 +676,38 @@ def updatehistory():
         return jsonifynotvalid("historystatus")
     
 
-    mydata = modelchecktokendata(token, userscsv)
-    if mydata or inputnotvalidated(token):
+    query = "SELECT * FROM users WHERE token = ? AND deleted_at IS NULL"
+    params = (token,)
+    dbdata = af_getdb(dbloc, query, params)
+    if dbdata or inputnotvalidated(token):
         if inputnotvalidated(token):
             username = "guest"
         else:
-            username = mydata['username']
+            username = dbdata[0]['username']
         
-        data = {}
-        data['csv'] = historycsv
-        data['targetname'] = "habitid"
-        data['targetdata'] = str(habitid)
-        data['targetname2'] = "username"
-        data['targetdata2'] = str(username)
-        data['targetname3'] = "historydate"
-        data['targetdata3'] = str(historydate)
-        data['newname'] = "historystatus"
-        data['newdata'] = str(historystatus)
-        updateddata = cupdate3(data)
-        if updateddata:
-            readdata = cread2(data)
-            return jsonify(
-                {
-                    "status": "ok",
-                    "message": "history updated",
-                    "data": readdata
-                }
-            )
+        query = f"SELECT * FROM history WHERE habitid = ? AND username = ? AND historydate = ?"
+        params = (habitid,username,historydate,)
+        dbdata = af_getdb(dbloc, query, params)
+        
+        if dbdata:
+            query = f"UPDATE history SET historystatus = ? WHERE habitid = ? AND username = ? AND historydate = ?"
+            params = (historystatus,habitid,username,historydate,)
+            dbdata3 = af_getdb(dbloc, query, params)
         else:
-            data = {}
-            data['csv'] = historycsv
-            data['username'] = username
-            data['habitid'] = habitid
-            data['historydate'] = historydate
-            data['historystatus'] = historystatus
-            data['created_at'] = datetime.now()
-            data['deleted_at'] = ""
-            createdata = ccreate(data)
+            query = f"INSERT INTO history (username,habitid,historydate,historystatus,created_at) VALUES (?,?,?,?,?) "
+            params = (username,habitid,historydate,historystatus,datetime.now(),)
+            dbdata3 = af_getdb(dbloc, query, params)
 
-            return jsonify(
-                {
-                    "status": "ok",
-                    "message": "history careated",
-                    "data": createdata
-                }
-            )
+        query = f"SELECT * FROM history WHERE habitid = ?"
+        params = (habitid,)
+        dbdata = af_getdb(dbloc, query, params)
+        return jsonify(
+            {
+                "status": "ok",
+                "message": "history updated",
+                "data": dbdata
+            }
+        )
     else:
         return jsonify(
         {
