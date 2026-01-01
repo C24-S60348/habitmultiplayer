@@ -18,7 +18,27 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Track and share your habits with friends!">
+  <meta name="description" content="Track and share your habits with friends! Build better habits together in a fun, social way.">
+
+  <meta name="keywords" content="habit tracker, habits, productivity, social habits, habit sharing, goal tracking, self improvement">
+
+  <meta name="author" content="Habit Multiplayer">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://habitmultiplayer.web.app/">
+  <meta property="og:title" content="Habit Multiplayer - Track and Share Your Habits">
+  <meta property="og:description" content="Track and share your habits with friends! Build better habits together in a fun, social way.">
+  <meta property="og:image" content="https://habitmultiplayer.web.app/icons/Icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://habitmultiplayer.web.app/">
+  <meta property="twitter:title" content="Habit Multiplayer - Track and Share Your Habits">
+  <meta property="twitter:description" content="Track and share your habits with friends! Build better habits together in a fun, social way.">
+  <meta property="twitter:image" content="https://habitmultiplayer.web.app/icons/Icon-512.png">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -28,11 +48,249 @@
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/Icon-512.png">
 
-  <title>Habit Multiplayer</title>
+  <title>Habit Multiplayer - Track and Share Your Habits</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      overflow: hidden;
+    }
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+      z-index: 9999;
+      transition: opacity 0.5s ease-out;
+    }
+    #loading.loaded {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .logo-container {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: fadeInDown 0.8s ease-out;
+    }
+    .logo-container img {
+      width: 200px;
+      height: 200px;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 30px rgba(255, 255, 255, 0.3));
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .app-title {
+      color: #ffffff;
+      font-size: 32px;
+      font-weight: 700;
+      margin-top: 20px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 1s ease-out 0.3s both;
+      letter-spacing: 1px;
+    }
+    .app-subtitle {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 16px;
+      margin-top: 8px;
+      font-style: italic;
+      animation: fadeIn 1s ease-out 0.5s both;
+    }
+    .app-tagline {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      margin-top: 5px;
+      animation: fadeIn 1s ease-out 0.6s both;
+    }
+    .progress-container {
+      width: 300px;
+      max-width: 80%;
+      animation: fadeInUp 0.8s ease-out 0.4s both;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ffffff 0%, #f0f0f0 50%, #ffffff 100%);
+      border-radius: 10px;
+      width: 0%;
+      animation: progressAnimation 2s ease-in-out infinite;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+    }
+    .loading-text {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+      margin-top: 15px;
+      text-align: center;
+      animation: fadeIn 1s ease-out 0.7s both;
+    }
+    .loading-dots {
+      display: inline-block;
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+    /* Pattern decoration */
+    .pattern-decoration {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.05;
+      background-image: 
+        repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255, 255, 255, 0.1) 35px, rgba(255, 255, 255, 0.1) 70px),
+        repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(255, 255, 255, 0.1) 35px, rgba(255, 255, 255, 0.1) 70px);
+      pointer-events: none;
+    }
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+    }
+    @keyframes progressAnimation {
+      0% {
+        width: 0%;
+      }
+      50% {
+        width: 70%;
+      }
+      100% {
+        width: 100%;
+      }
+    }
+    @keyframes dots {
+      0%, 20% {
+        content: '.';
+      }
+      40% {
+        content: '..';
+      }
+      60%, 100% {
+        content: '...';
+      }
+    }
+    /* Hide loading screen when Flutter is ready */
+    body.flutter-ready #loading {
+      opacity: 0;
+      pointer-events: none;
+    }
+    @media (max-width: 600px) {
+      .logo-container img {
+        width: 150px;
+        height: 150px;
+      }
+      .app-title {
+        font-size: 26px;
+      }
+      .app-subtitle {
+        font-size: 14px;
+      }
+      .app-tagline {
+        font-size: 12px;
+      }
+      .progress-container {
+        width: 250px;
+      }
+    }
+  </style>
 </head>
 <body>
+  <!-- Loading Screen -->
+  <div id="loading">
+    <div class="pattern-decoration"></div>
+    <div class="logo-container">
+      <img src="icons/Icon-512.png" alt="Habit Multiplayer Logo" onerror="this.style.display='none'">
+      <div class="app-title">Habit Multiplayer</div>
+      <div class="app-subtitle">"Track and Share Your Habits"</div>
+      <div class="app-tagline">Build Better Habits Together</div>
+    </div>
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+      </div>
+      <div class="loading-text">
+        Loading application<span class="loading-dots">...</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Remove loading screen when Flutter is ready
+    window.addEventListener('flutter-first-frame', function() {
+      const loading = document.getElementById('loading');
+      loading.classList.add('loaded');
+      document.body.classList.add('flutter-ready');
+      
+      // Remove loading element after animation
+      setTimeout(function() {
+        loading.remove();
+      }, 500);
+    });
+
+    // Fallback: Remove loading screen after 10 seconds if Flutter doesn't load
+    setTimeout(function() {
+      const loading = document.getElementById('loading');
+      if (loading) {
+        console.warn('Flutter app took too long to load. Removing loading screen.');
+        loading.classList.add('loaded');
+        document.body.classList.add('flutter-ready');
+        setTimeout(function() {
+          loading.remove();
+        }, 500);
+      }
+    }, 10000);
+
+    // Log loading progress
+    console.log('Loading Habit Multiplayer...');
+    console.log('Base href:', document.querySelector('base').href);
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
