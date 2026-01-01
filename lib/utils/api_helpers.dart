@@ -8,13 +8,14 @@ const String apiBase = 'https://afwanhaziq.vps.webdock.cloud/api/habit';
 Future<bool> hasInternetConnection() async {
   try {
     final response = await http
-        .get(Uri.parse('https://www.google.com/generate_204'))
+        .get(Uri.parse('https://afwanhaziq.vps.webdock.cloud/api/habit/healthcheck'))
         .timeout(const Duration(seconds: 5));
-    return response.statusCode == 204 || response.statusCode == 200;
-  } catch (_) {
+    return response.statusCode == 200;
+  } catch (e) {
+    print('Network error: $e');
     return false;
   }
-}
+}  
 
 // Helper function for safe HTTP GET requests with timeout and error handling
 Future<http.Response?> safeHttpGet(Uri url, {Duration timeout = const Duration(seconds: 10)}) async {
