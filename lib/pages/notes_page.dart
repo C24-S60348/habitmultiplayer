@@ -367,7 +367,7 @@ class _NotesPageState extends State<NotesPage> {
   String _getDisplayName(String username) {
     // Special case for "alluser"
     if (username == 'alluser') {
-      return '🌐 All Users';
+      return 'All Users';
     }
     // Return name if available and not empty, otherwise return username
     final name = memberNamesMap[username];
@@ -383,6 +383,18 @@ class _NotesPageState extends State<NotesPage> {
       return a.compareTo(b);
     });
     return members;
+  }
+
+  // Shared function to save notes (used by both upper and lower save buttons)
+  void _saveNote(String member) {
+    final controller = controllersMap[member];
+    if (controller == null) return;
+    
+    if (member == 'alluser') {
+      _updateAllUserNote();
+    } else {
+      _updateNotesOnServer(member, controller.text);
+    }
   }
 
   Widget _buildNotesView(String member, String currentUsername) {
@@ -453,7 +465,7 @@ class _NotesPageState extends State<NotesPage> {
                     children: [
                       ElevatedButton(
                         onPressed: (isSaving || !hasChanges) ? null : () {
-                          _updateNotesOnServer(member, controller.text);
+                          _saveNote(member);
                         },
                         child: isSaving
                             ? Row(
@@ -513,11 +525,7 @@ class _NotesPageState extends State<NotesPage> {
                   children: [
                     ElevatedButton(
                       onPressed: (isSaving || !hasChanges) ? null : () {
-                        if (isAllUser) {
-                          _updateAllUserNote();
-                        } else {
-                          _updateNotesOnServer(member, controller.text);
-                        }
+                        _saveNote(member);
                       },
                       child: isSaving
                           ? Row(
@@ -694,23 +702,24 @@ class _NotesPageState extends State<NotesPage> {
                                           });
                                         },
                                         child: Chip(
+                                          avatar: isAllUser 
+                                              ? Icon(
+                                                  Icons.public, 
+                                                  size: 20,
+                                                  color: isSelected ? Colors.green : Colors.green[300],
+                                                )
+                                              : null,
                                           label: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Text(
-                                                    displayName,
-                                                    style: TextStyle(
-                                                      fontWeight: (isCurrentUser || isAllUser) ? FontWeight.bold : FontWeight.normal,
-                                                      color: isSelected 
-                                                          ? (isAllUser ? Colors.green : (isCurrentUser ? Colors.blue : Colors.black87))
-                                                          : (isAllUser ? Colors.green[300] : (isCurrentUser ? Colors.blue[300] : Colors.grey[600])),
-                                                    ),
-                                                  ),
-                                                ],
+                                              Text(
+                                                displayName,
+                                                style: TextStyle(
+                                                  fontWeight: (isCurrentUser || isAllUser) ? FontWeight.bold : FontWeight.normal,
+                                                  color: isSelected 
+                                                      ? (isAllUser ? Colors.green : (isCurrentUser ? Colors.blue : Colors.black87))
+                                                      : (isAllUser ? Colors.green[300] : (isCurrentUser ? Colors.blue[300] : Colors.grey[600])),
+                                                ),
                                               ),
                                               if (hasChanges)
                                                 Padding(
