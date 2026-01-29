@@ -342,9 +342,16 @@ class _NotesPageState extends State<NotesPage> {
       changedMap[member] = false;
     }
 
-    // Set selected member (default to current user, or first member)
+    // Set selected member (default to "alluser" if available, otherwise current user, or first member)
     final currentUsername = prefs.getString('loggedInUsername') ?? 'guest';
-    final selectedMember = allMembers.contains(currentUsername) ? currentUsername : (allMembers.isNotEmpty ? allMembers.first : null);
+    String? selectedMember;
+    if (allMembers.contains('alluser')) {
+      selectedMember = 'alluser';
+    } else if (allMembers.contains(currentUsername)) {
+      selectedMember = currentUsername;
+    } else {
+      selectedMember = allMembers.isNotEmpty ? allMembers.first : null;
+    }
     
     setState(() {
       notesMap = notes;

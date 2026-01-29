@@ -24,7 +24,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool _isLoading = true;
   bool _hasShownNoInternetDialog = false;
   bool _isLoadingHabits = false; // Guard to prevent concurrent loads
-  List<Map<String, dynamic>> _top3Habits = []; // Store top 3 habits
 
   Color _colorFromThirdLetterLightMode(String title) {
     if (title.length < 3) return Colors.blueGrey;
@@ -110,7 +109,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _getLoggedInUser();
     _loadHabits();
-    _loadTop3Habits();
   }
 
   @override
@@ -132,10 +130,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   // }
 
   Future<void> _onRefresh() async {
-    await Future.wait([
-      _loadHabits(),
-      _loadTop3Habits(),
-    ]);
+    await _loadHabits();
   }
 
   Future<void> _showNoInternetDialog() async {
@@ -184,34 +179,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     setState(() {
       loggedInUser = prefs.getString('loggedInUsername') ?? 'guest';
     });
-  }
-
-  Future<void> _loadTop3Habits() async {
-    if (!mounted) return;
-    
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
-    final url = Uri.parse('$apiBase/top3habits');
-    final body = {'token': token};
-
-    try {
-      final response = await safeHttpPost(url, body: body);
-
-      if (response != null && response.statusCode == 200) {
-        await Future.delayed(Duration.zero);
-        final data = safeJsonDecode(response.body);
-        if (data != null && data['status'] == 'ok') {
-          final List<dynamic> list = (data['data'] ?? []) as List<dynamic>;
-          if (mounted) {
-            setState(() {
-              _top3Habits = list.map((item) => item as Map<String, dynamic>).toList();
-            });
-          }
-        }
-      }
-    } catch (e) {
-      print('Error loading top 3 habits: $e');
-    }
   }
 
   Future<void> _showAddHabitDialog(BuildContext context) async {
@@ -691,86 +658,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Top 3 Habits Section
-                if (_top3Habits.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.emoji_events, color: Colors.amber, size: 24),
-                            SizedBox(width: 8),
-                            Text(
-                              'Top 3 Habits (Last 5 Days)',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 12),
-                        ..._top3Habits.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final habit = entry.value;
-                          final medals = ['🥇', '🥈', '🥉'];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Row(
-                              children: [
-                                Text(
-                                  medals[index],
-                                  style: TextStyle(fontSize: 20),
-                                ),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    habit['name']?.toString() ?? '',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '${habit['count']} ✓',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green[700],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 32),
                 Expanded(
                   child: Center(
                     child: ConstrainedBox(

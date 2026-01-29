@@ -158,11 +158,13 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
           ),
         ),
-        child: Center(
+        child: SafeArea(
           child: SingleChildScrollView(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+            physics: AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20.0),
+              child: Column(
+                children: [
                 Text(
                   '🌟 Habit Multiplayer 🌟',
                   style: TextStyle(
@@ -400,6 +402,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 ),
               ],
+            ),
             ),
           ),
         ),

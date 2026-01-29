@@ -463,8 +463,8 @@ class _EditHabitPageState extends State<EditHabitPage> with SingleTickerProvider
           content: TextField(
             controller: memberController,
             decoration: InputDecoration(
-              labelText: 'Username',
-              hintText: 'Enter username',
+              labelText: 'Email',
+              hintText: 'Enter email',
               border: OutlineInputBorder(),
             ),
             autofocus: true,
