@@ -29,6 +29,9 @@ class _NotesPageState extends State<NotesPage> {
   bool _isLoading = true;
   String? _savingUsername; // Track which user's notes are being saved
   String? _selectedMember; // Currently selected member to view/edit
+  final TextEditingController _allUserController = TextEditingController();
+  bool _allUserNoteChanged = false;
+  bool _isSavingAllUserNote = false;
 
   @override
   void initState() {
@@ -42,7 +45,71 @@ class _NotesPageState extends State<NotesPage> {
     for (final controller in controllersMap.values) {
       controller.dispose();
     }
+    _allUserController.dispose();
     super.dispose();
+  }
+
+  Future<void> _updateAllUserNote() async {
+    setState(() {
+      _isSavingAllUserNote = true;
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    final url = Uri.parse('$apiBase/updatenote');
+    final body = {
+      'habitid': widget.habitId,
+      'notes': _allUserController.text,
+      'token': token,
+      'alluser': 'yes', // This tells the API to save as "alluser" note
+    };
+    final resp = await safeHttpPost(url, body: body);
+    
+    if (resp != null && resp.statusCode == 200) {
+      final data = safeJsonDecode(resp.body);
+      if (data != null && data['status'] == 'ok') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('All User note saved successfully!'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() {
+          _allUserNoteChanged = false;
+        });
+      } else if (data != null && data['status'] == 'error') {
+        final errorMsg = data['message']?.toString() ?? 'Failed to save All User note';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            duration: Duration(seconds: 3),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save All User note'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Network error. Please check your connection.'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+    
+    setState(() {
+      _isSavingAllUserNote = false;
+    });
   }
 
   Future<void> _updateNotesOnServer(String username, String newNote) async {
@@ -181,8 +248,13 @@ class _NotesPageState extends State<NotesPage> {
           final username = m['username']?.toString() ?? '';
           final note = m['notes']?.toString() ?? '';
           if (username.isNotEmpty) {
-            membersFromNotes.add(username);
-            notes[username] = note;
+            if (username == 'alluser') {
+              // Store the "All User" note separately
+              _allUserController.text = note;
+            } else {
+              membersFromNotes.add(username);
+              notes[username] = note;
+            }
           }
         }
       }
@@ -190,6 +262,9 @@ class _NotesPageState extends State<NotesPage> {
 
     // Combine members from habit and notes
     final allMembers = {...membersFromHabit, ...membersFromNotes};
+    
+    // Add "alluser" as a special member
+    allMembers.add('alluser');
     
     // Fetch member names from /readprofile API
     Map<String, String> memberNamesMap = {};
@@ -254,11 +329,16 @@ class _NotesPageState extends State<NotesPage> {
       }
     }
     
-    // Create controllers for all members
+    // Create controllers for all members (including alluser)
     final Map<String, TextEditingController> controllers = {};
     final Map<String, bool> changedMap = {};
     for (final member in allMembers) {
-      controllers[member] = TextEditingController(text: notes[member] ?? '');
+      if (member == 'alluser') {
+        // Use the existing _allUserController
+        controllers[member] = _allUserController;
+      } else {
+        controllers[member] = TextEditingController(text: notes[member] ?? '');
+      }
       changedMap[member] = false;
     }
 
@@ -278,20 +358,32 @@ class _NotesPageState extends State<NotesPage> {
   }
   
   String _getDisplayName(String username) {
+    // Special case for "alluser"
+    if (username == 'alluser') {
+      return '🌐 All Users';
+    }
     // Return name if available and not empty, otherwise return username
     final name = memberNamesMap[username];
     return (name != null && name.isNotEmpty) ? name : username;
   }
   
   List<String> _getAllMembers() {
-    return allMembersSet.toList()..sort();
+    final members = allMembersSet.toList();
+    // Sort with "alluser" first, then alphabetically
+    members.sort((a, b) {
+      if (a == 'alluser') return -1;
+      if (b == 'alluser') return 1;
+      return a.compareTo(b);
+    });
+    return members;
   }
 
   Widget _buildNotesView(String member, String currentUsername) {
+    final isAllUser = member == 'alluser';
     final isCurrentUser = member == currentUsername;
     final controller = controllersMap[member];
-    final isSaving = _savingUsername == member;
-    final hasChanges = notesChangedMap[member] == true;
+    final isSaving = isAllUser ? _isSavingAllUserNote : (_savingUsername == member);
+    final hasChanges = isAllUser ? _allUserNoteChanged : (notesChangedMap[member] == true);
     
     if (controller == null) {
       return Center(
@@ -314,7 +406,10 @@ class _NotesPageState extends State<NotesPage> {
             // Member name header
             Row(
               children: [
-                Icon(Icons.person, color: Theme.of(context).primaryColor),
+                Icon(
+                  isAllUser ? Icons.public : Icons.person, 
+                  color: isAllUser ? Colors.green : Theme.of(context).primaryColor
+                ),
                 SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -324,14 +419,14 @@ class _NotesPageState extends State<NotesPage> {
                         _getDisplayName(member),
                         style: TextStyle(
                           fontSize: 20,
-                          fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
-                          color: isCurrentUser ? Colors.blue : Colors.black87,
+                          fontWeight: (isCurrentUser || isAllUser) ? FontWeight.bold : FontWeight.normal,
+                          color: isAllUser ? Colors.green : (isCurrentUser ? Colors.blue : Colors.black87),
                         ),
                       ),
                     ],
                   ),
                 ),
-                if (isCurrentUser && hasChanges)
+                if ((isCurrentUser || isAllUser) && hasChanges)
                   Padding(
                     padding: const EdgeInsets.only(top: 16.0, right: 8.0),
                     child: Text(
@@ -343,7 +438,7 @@ class _NotesPageState extends State<NotesPage> {
                       ),
                     ),
                   ),
-                if (isCurrentUser)
+                if (isCurrentUser || isAllUser)
                 Padding(
                   padding: const EdgeInsets.only(top: 16.0),
                   child: Row(
@@ -381,25 +476,29 @@ class _NotesPageState extends State<NotesPage> {
             TextField(
               controller: controller,
               maxLines: null,
-              enabled: isCurrentUser && !_isLoading && !isSaving,
-              readOnly: !isCurrentUser, // Read-only for other users
+              enabled: (isCurrentUser || isAllUser) && !_isLoading && !isSaving,
+              readOnly: !isCurrentUser && !isAllUser, // Read-only for other users
               decoration: InputDecoration(
                 border: OutlineInputBorder(),
-                labelText: 'Notes',
-                hintText: isCurrentUser 
-                    ? 'Write your notes here...' 
+                labelText: isAllUser ? 'All Users Note (Shared)' : 'Notes',
+                hintText: (isCurrentUser || isAllUser)
+                    ? (isAllUser ? 'Write a note visible to all members...' : 'Write your notes here...') 
                     : 'No notes yet',
-                filled: !isCurrentUser,
+                filled: !isCurrentUser && !isAllUser,
                 fillColor: Colors.grey[100],
               ),
-              onChanged: isCurrentUser ? (value) {
+              onChanged: (isCurrentUser || isAllUser) ? (value) {
                 setState(() {
-                  notesChangedMap[member] = true;
+                  if (isAllUser) {
+                    _allUserNoteChanged = true;
+                  } else {
+                    notesChangedMap[member] = true;
+                  }
                 });
               } : null,
             ),
-            // Save button (only for current user)
-            if (isCurrentUser)
+            // Save button (for current user or alluser)
+            if (isCurrentUser || isAllUser)
               Padding(
                 padding: const EdgeInsets.only(top: 16.0),
                 child: Row(
@@ -407,7 +506,11 @@ class _NotesPageState extends State<NotesPage> {
                   children: [
                     ElevatedButton(
                       onPressed: (isSaving || !hasChanges) ? null : () {
-                        _updateNotesOnServer(member, controller.text);
+                        if (isAllUser) {
+                          _updateAllUserNote();
+                        } else {
+                          _updateNotesOnServer(member, controller.text);
+                        }
                       },
                       child: isSaving
                           ? Row(
@@ -437,10 +540,10 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   Future<bool> _onWillPop() async {
-    // Check if current user has unsaved changes
+    // Check if current user has unsaved changes or if All User note has unsaved changes
     final prefs = await SharedPreferences.getInstance();
     final currentUsername = prefs.getString('loggedInUsername') ?? 'guest';
-    if (notesChangedMap[currentUsername] == true) {
+    if (notesChangedMap[currentUsername] == true || _allUserNoteChanged) {
       // Show confirmation dialog if there are unsaved changes
       return await showDialog(
             context: context,
@@ -462,6 +565,9 @@ class _NotesPageState extends State<NotesPage> {
                       Navigator.of(context).pop(true); // Leave without saving
                     },
                     child: const Text('Leave'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
                   ),
                 ],
               );
@@ -541,7 +647,7 @@ class _NotesPageState extends State<NotesPage> {
                         )
                       : Column(
                           children: [
-                            // Members list at the top
+                            // Members list
                             Container(
                               padding: EdgeInsets.all(16),
                               child: Column(
@@ -566,9 +672,12 @@ class _NotesPageState extends State<NotesPage> {
                                     spacing: 12,
                                     runSpacing: 8,
                                     children: allMembers.map<Widget>((member) {
+                                      final isAllUser = member == 'alluser';
                                       final isCurrentUser = member == currentUsername;
                                       final isSelected = member == _selectedMember;
-                                      final hasChanges = notesChangedMap[member] == true && isCurrentUser;
+                                      final hasChanges = isAllUser 
+                                          ? _allUserNoteChanged 
+                                          : (notesChangedMap[member] == true && isCurrentUser);
                                       final displayName = _getDisplayName(member);
                                       
                                       return GestureDetector(
@@ -588,10 +697,10 @@ class _NotesPageState extends State<NotesPage> {
                                                   Text(
                                                     displayName,
                                                     style: TextStyle(
-                                                      fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
+                                                      fontWeight: (isCurrentUser || isAllUser) ? FontWeight.bold : FontWeight.normal,
                                                       color: isSelected 
-                                                          ? (isCurrentUser ? Colors.blue : Colors.black87)
-                                                          : (isCurrentUser ? Colors.blue[300] : Colors.grey[600]),
+                                                          ? (isAllUser ? Colors.green : (isCurrentUser ? Colors.blue : Colors.black87))
+                                                          : (isAllUser ? Colors.green[300] : (isCurrentUser ? Colors.blue[300] : Colors.grey[600])),
                                                     ),
                                                   ),
                                                 ],
@@ -608,13 +717,15 @@ class _NotesPageState extends State<NotesPage> {
                                             ],
                                           ),
                                           backgroundColor: isSelected
-                                              ? (isCurrentUser 
-                                                  ? Colors.blue.withOpacity(0.2)
-                                                  : Colors.grey.withOpacity(0.2))
+                                              ? (isAllUser
+                                                  ? Colors.green.withOpacity(0.2)
+                                                  : (isCurrentUser 
+                                                      ? Colors.blue.withOpacity(0.2)
+                                                      : Colors.grey.withOpacity(0.2)))
                                               : Colors.transparent,
                                           side: BorderSide(
                                             color: isSelected
-                                                ? (isCurrentUser ? Colors.blue : Colors.grey)
+                                                ? (isAllUser ? Colors.green : (isCurrentUser ? Colors.blue : Colors.grey))
                                                 : Colors.grey[300]!,
                                             width: isSelected ? 2 : 1,
                                           ),
